@@ -7,8 +7,18 @@ export function env(name: string): string {
   return v;
 }
 
+// Accepts common copy-paste variants and reduces them to https://<ref>.supabase.co
+function projectUrl(raw: string): string {
+  const s = raw.trim().replace(/^["']|["']$/g, "");
+  const dash = s.match(/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i);
+  if (dash) return `https://${dash[1]}.supabase.co`;
+  const m = s.match(/^(https?:\/\/[^/]+)/i);
+  if (!m) throw new Error(`SUPABASE_URL doesn't look like a URL: "${s}". Expected https://<project-ref>.supabase.co`);
+  return m[1];
+}
+
 export function adminClient() {
-  return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
+  return createClient(projectUrl(env("SUPABASE_URL")), env("SUPABASE_SERVICE_ROLE_KEY").trim(), {
     auth: { persistSession: false },
   });
 }
