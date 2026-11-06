@@ -35,9 +35,18 @@ const traditions = readDir("traditions").map(({ data, content }) => ({
   reviewed_by: data.reviewed_by ?? null,
 }));
 
+const sharedRules = readFileSync(join(root, "shared-rules.md"), "utf8").trim();
+
 const c = await db.from("companions").upsert(companions);
 if (c.error) throw c.error;
 const t = await db.from("traditions").upsert(traditions);
 if (t.error) throw t.error;
+const p = await db.from("prompts").upsert({ key: "shared_rules", body: sharedRules, updated_at: new Date().toISOString() });
+if (p.error) {
+  if (p.error.code === "PGRST205" || /prompts/.test(p.error.message)) {
+    throw new Error("The prompts table is missing. Run supabase/migrations/20261106010000_prompts.sql in the SQL Editor, then try again.");
+  }
+  throw p.error;
+}
 
-console.log(`Loaded ${companions.length} companions and ${traditions.length} traditions.`);
+console.log(`Loaded ${companions.length} companions, ${traditions.length} traditions, and the shared rules.`);

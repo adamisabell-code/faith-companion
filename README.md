@@ -2,15 +2,15 @@
 
 A Christian prayer and accountability companion app. Users pick one of four companions: **Pip** (mustard seed), **Bram** (donkey), **Sola** (sparrow), **Lumi** (lamb). They chat about life and Scripture, set a small commitment each morning, and get a check-in each evening.
 
-This repo holds the **data layer and the companion "brain"**. It plugs into the same chat engine as Watt (daily10), in its own Supabase project so Watt stays untouched.
+This repo holds the **data layer and the chat backend** (a Supabase Edge Function that talks to Claude). It runs in its own Supabase project, separate from Watt.
 
 ## How the AI "knows" things (no fine-tuning)
 
 The app uses an off-the-shelf model (e.g. Claude). It is never trained on Bible text. Instead, every chat turn gets:
 
-1. **Instructions** assembled by `src/buildSystemPrompt.ts`:
+1. **Instructions** assembled by `supabase/functions/chat/prompt.ts`:
    `content/shared-rules.md` → the user's tradition profile → the companion's personality → what we know about this user (commitments, prayer requests, memories).
-2. **Tools** (`src/tools.ts`) the model calls to look things up and save things:
+2. **Tools** (`supabase/functions/chat/tools.ts`) the model calls to look things up and save things:
    - `get_passage`: exact verse text from the database. The only way the model may quote Scripture.
    - `search_verses`: semantic search ("verses about worry"), backed by pgvector.
    - `save_commitment`, `update_commitment`, `save_prayer_request`, `update_prayer_request`, `save_memory`, `log_safety_event`.
@@ -22,7 +22,9 @@ Edit a markdown file in `content/`, run `npm run load-content`, and the change i
 ```
 supabase/
   migrations/20261106000000_init.sql   tables, RLS, get_passage + match_verses
+  migrations/20261106010000_prompts.sql  server-only table for the shared rules
   seed.sql                             translations + 73 books (66 + deuterocanon)
+  functions/chat/                      chat endpoint: prompt assembly, Claude call, tool loop
 content/
   shared-rules.md                      rules every companion follows (Scripture, safety, tradition)
   companions/{pip,bram,sola,lumi}.md   personality prompts + onboarding copy
@@ -31,9 +33,7 @@ scripts/
   load-content.ts                      push content/ into Supabase
   import-bible.ts                      load a public-domain Bible (VPL text file)
   embed-verses.ts                      build search embeddings (Voyage, 1024 dims)
-src/
-  buildSystemPrompt.ts                 assemble the prompt for a chat turn
-  tools.ts                             tool definitions for the model
+  chat.ts                              talk to a companion from the terminal (testing)
 evals/
   cases.jsonl                          test conversations: fake verses, doctrine, crisis
 ```
@@ -82,8 +82,23 @@ Every profile is marked DRAFT and has `reviewed_by: null`. Have a pastor or prie
 
 `evals/cases.jsonl` lists conversations the app must handle well: fake or misquoted verses, books that don't exist, doctrine that differs by tradition, requests to speak as Jesus, and crisis messages. Run them against the chat backend before every prompt or model change, and add a case whenever a real conversation goes wrong.
 
-## Still to build (in the app, reusing Watt's engine)
+## Deploy the chat function
 
-- Chat endpoint: call the model with `buildSystemPrompt` + `tools`, execute tool calls against Supabase, store `messages`.
-- Check-in scheduler: a Supabase cron job and edge function that sends morning and evening pushes from `profiles` times.
-- Onboarding screens writing to `profiles` (designs in the Faith Buddy Cast canvas).
+1. If the `prompts` table isn't in your project yet, run `supabase/migrations/20261106010000_prompts.sql` in the SQL Editor (or let the GitHub integration apply it). Then `npm run load-content` again.
+2. Secrets (Supabase dashboard → Edge Functions → Secrets): `ANTHROPIC_API_KEY` (required), `VOYAGE_API_KEY` (for verse search). Optional: `ANTHROPIC_MODEL` (defaults to `claude-sonnet-5-5`).
+3. Deploy from the repo folder:
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref YOUR-REF
+   npm run deploy-chat
+   ```
+4. Test it: `npm run chat` (Bram, non-denominational), or `npm run chat -- lumi catholic`. Inside the chat, `/evening` and `/morning` trigger check-ins, `/companion sola` switches companions, `/reset` clears the test user's history.
+
+### Calling it from the app
+
+`POST https://<ref>.supabase.co/functions/v1/chat` with the signed-in user's access token as `Authorization: Bearer <token>` and a body of `{ "message": "..." }` or `{ "checkin": "evening" }`. It returns `{ "reply": "...", "tools_used": [...] }`. The user needs a `profiles` row (written by onboarding) first.
+
+## Still to build
+
+- Check-in scheduler: a Supabase cron job that calls the chat function with `checkin` at each user's morning/evening time and sends the reply as a push notification.
+- The app itself: onboarding screens writing to `profiles` (designs in the Faith Buddy Cast canvas) and a chat screen calling the function.
