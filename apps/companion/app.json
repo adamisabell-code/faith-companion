@@ -14,7 +14,7 @@
       "backgroundColor": "#F5F2EC"
     },
     "ios": {
-      "bundleIdentifier": "com.isabellholdings.faithcompanion",
+      "bundleIdentifier": "com.amenbuddy.app",
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
@@ -22,7 +22,7 @@
       }
     },
     "android": {
-      "package": "com.isabellholdings.faithcompanion",
+      "package": "com.amenbuddy.app",
       "adaptiveIcon": {
         "backgroundColor": "#E2EDD8",
         "foregroundImage": "./assets/android-icon-foreground.png",

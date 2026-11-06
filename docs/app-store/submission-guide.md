@@ -38,7 +38,7 @@ Work through these in order. Each step says where you do it, and what you should
 
 Search the repo for `TODO(launch)`:
 - `apps/companion/src/lib/config.ts`: app name, **support email** (must be a real inbox), legal entity name, and `WEB_URL` (your web app address, used by password-reset emails).
-- `apps/companion/app.json`: `name` (shown under the icon). The bundle ID `com.isabellholdings.faithcompanion` is permanent after the first App Store upload, so change it now if you want something else.
+- `apps/companion/app.json`: `name` (shown under the icon). The bundle ID `com.amenbuddy.app` is permanent after the first App Store upload, so change it now if you want something else.
 - Read the Privacy Policy and Terms at `/privacy` and `/terms`. A quick review by a lawyer before public launch is wise.
 
 Commit and push. Vercel redeploys on its own.
