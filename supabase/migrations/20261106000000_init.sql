@@ -246,5 +246,31 @@ as $$
   limit p_count;
 $$;
 
+------------------------------------------------------------
+-- Explicit API permissions
+-- The project has "automatically expose new tables" turned OFF, so nothing is
+-- reachable from the app unless granted here. RLS policies above still apply.
+------------------------------------------------------------
+
+grant usage on schema public to anon, authenticated, service_role;
+
+-- Server (service role): everything.
+grant all on all tables in schema public to service_role;
+grant all on all functions in schema public to service_role;
+
+-- Reference data: read-only for the app.
+grant select on public.translations, public.books, public.verses,
+                public.traditions, public.companions
+  to anon, authenticated;
+
+-- User data: signed-in users only, limited further by RLS to their own rows.
+grant select, insert, update, delete
+  on public.profiles, public.commitments, public.prayer_requests, public.memories
+  to authenticated;
+grant select on public.check_ins, public.messages to authenticated;
+-- verse_embeddings and safety_events: no grants to anon/authenticated (server only).
+
+grant execute on function public.get_passage(text, text, int, int, int) to anon, authenticated;
+
 -- Server-only: semantic search reads embeddings, so keep it off the public API.
 revoke execute on function public.match_verses(vector, text, boolean, int) from public, anon, authenticated;
