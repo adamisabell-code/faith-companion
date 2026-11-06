@@ -24,7 +24,13 @@ const known = new Set(books!.map((b) => b.id as string));
 // PS2 is Psalm 151 in some editions. Greek Esther (ESG) and Greek Daniel (DAG)
 // are separate files that reuse chapter/verse numbers, so they are skipped
 // rather than merged (merging would overwrite the regular Esther/Daniel text).
-const codeFix: Record<string, string> = { PS2: "PSA" };
+// ebible's VPL files use BibleWorks-style codes for some books; map them to USFM.
+const codeFix: Record<string, string> = {
+  PS2: "PSA",
+  SOL: "SNG", EZE: "EZK", JOE: "JOL", NAH: "NAM",
+  MAR: "MRK", JOH: "JHN", PHI: "PHP", JAM: "JAS",
+  "1JO": "1JN", "2JO": "2JN", "3JO": "3JN",
+};
 
 const line = /^([1-3]?[A-Z]{2,3}[0-9]?)\s+(\d+):(\d+)\s+(.*)$/;
 const rows: { translation_id: string; book_id: string; chapter: number; verse: number; text: string }[] = [];
