@@ -2,23 +2,64 @@
 import Svg, { Circle, Ellipse, G, Path } from "react-native-svg";
 import type { CompanionId } from "@/lib/theme";
 
-export function Character({ id, size = 96 }: { id: CompanionId; size?: number }) {
+/**
+ * `stage` shows growth with the user's streak (0 new → 3 at 30 days).
+ * Pip literally grows (more leaves, then a flower); the others collect sparkles
+ * and, at 30 days, a little crown (James 1:12, "the crown of life").
+ */
+export function Character({ id, size = 96, stage = 1 }: { id: CompanionId; size?: number; stage?: 0 | 1 | 2 | 3 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {id === "pip" && <Pip />}
+      {id === "pip" && <Pip stage={stage} />}
       {id === "bram" && <Bram />}
       {id === "sola" && <Sola />}
       {id === "lumi" && <Lumi />}
+      {id !== "pip" && stage >= 1 && <Sparkle x={160} y={46} r={9} />}
+      {id !== "pip" && stage >= 2 && <Sparkle x={40} y={70} r={7} />}
+      {id !== "pip" && stage >= 3 && <Crown y={id === "bram" ? 40 : id === "sola" ? 52 : 44} />}
     </Svg>
   );
 }
 
-function Pip() {
+function Sparkle({ x, y, r }: { x: number; y: number; r: number }) {
+  return <Path d={`M${x} ${y - r} Q${x} ${y} ${x + r} ${y} Q${x} ${y} ${x} ${y + r} Q${x} ${y} ${x - r} ${y} Q${x} ${y} ${x} ${y - r} Z`} fill="#E8B83A" />;
+}
+
+function Crown({ y }: { y: number }) {
   return (
     <G>
-      <Path d="M100 72 C100 60 100 52 100 44" stroke="#4E8A3E" strokeWidth={5} strokeLinecap="round" fill="none" />
-      <Path d="M100 50 C 82 32 62 36 58 46 C 70 58 88 58 100 50 Z" fill="#6BAA4F" />
-      <Path d="M100 46 C 116 24 140 26 146 36 C 134 52 114 54 100 46 Z" fill="#7DBE5C" />
+      <Path d={`M80 ${y + 16} L82 ${y} L92 ${y + 9} L100 ${y - 4} L108 ${y + 9} L118 ${y} L120 ${y + 16} Z`} fill="#E8B83A" stroke="#C99A22" strokeWidth={2} strokeLinejoin="round" />
+      <Circle cx={100} cy={y + 10} r={2.5} fill="#FFFFFF" />
+    </G>
+  );
+}
+
+function Pip({ stage }: { stage: 0 | 1 | 2 | 3 }) {
+  return (
+    <G>
+      {stage === 0 ? (
+        <>
+          <Path d="M100 72 C100 66 100 62 100 58" stroke="#4E8A3E" strokeWidth={5} strokeLinecap="round" fill="none" />
+          <Path d="M100 60 C 92 50 82 52 80 57 C 86 63 94 63 100 60 Z" fill="#6BAA4F" />
+          <Path d="M100 58 C 108 47 120 48 123 54 C 117 62 107 63 100 58 Z" fill="#7DBE5C" />
+        </>
+      ) : (
+        <>
+          <Path d={stage >= 2 ? "M100 72 C100 56 100 40 100 26" : "M100 72 C100 60 100 52 100 44"} stroke="#4E8A3E" strokeWidth={5} strokeLinecap="round" fill="none" />
+          <Path d="M100 50 C 82 32 62 36 58 46 C 70 58 88 58 100 50 Z" fill="#6BAA4F" />
+          <Path d="M100 46 C 116 24 140 26 146 36 C 134 52 114 54 100 46 Z" fill="#7DBE5C" />
+          {stage >= 2 ? <Path d="M100 30 C 90 16 76 16 72 24 C 80 34 92 34 100 30 Z" fill="#5E9F45" /> : null}
+          {stage >= 3 ? (
+            <G>
+              {[0, 72, 144, 216, 288].map((a) => {
+                const rad = (a * Math.PI) / 180;
+                return <Circle key={a} cx={100 + Math.cos(rad) * 8} cy={18 + Math.sin(rad) * 8} r={6} fill="#FFFFFF" stroke="#F0D9A8" strokeWidth={1.5} />;
+              })}
+              <Circle cx={100} cy={18} r={5} fill="#E8B83A" />
+            </G>
+          ) : null}
+        </>
+      )}
       <Path d="M100 70 C 60 70 52 120 64 148 C 76 176 124 176 136 148 C 148 120 140 70 100 70 Z" fill="#E0AE4A" />
       <Ellipse cx={78} cy={134} rx={8} ry={4.5} fill="#EE9A82" opacity={0.6} />
       <Ellipse cx={122} cy={134} rx={8} ry={4.5} fill="#EE9A82" opacity={0.6} />

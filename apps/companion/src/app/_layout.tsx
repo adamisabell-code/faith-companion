@@ -27,7 +27,7 @@ function Gate({ fontsReady }: { fontsReady: boolean }) {
   if (!show) return null;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
-      <Stack.Screen name="chat" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="home" options={{ gestureEnabled: false }} />
       <Stack.Screen name="settings" options={{ presentation: "modal" }} />
     </Stack>
   );

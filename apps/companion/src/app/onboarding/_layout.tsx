@@ -7,6 +7,6 @@ export default function OnboardingLayout() {
   if (!session) return <Redirect href="/welcome" />;
   if (profileLoading) return null;
   // Already set up (e.g. a returning user): go to the chat, don't redo onboarding.
-  if (profile?.onboarded_at) return <Redirect href="/chat" />;
+  if (profile?.onboarded_at) return <Redirect href="/home" />;
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }} />;
 }

@@ -31,10 +31,11 @@ MEET THE CAST
 • Lumi, a lost lamb. Soft and patient for grief, hard seasons, and coming back to faith.
 
 WHAT YOUR COMPANION DOES
+• Lives on your home screen and grows as your streak grows (Pip literally sprouts new leaves)
 • Prays with you in plain, personal words
 • Morning: helps you set one small, doable commitment
 • Evening: checks in on exactly what you said you'd do
-• Remembers prayer requests and follows up on the day you choose
+• Remembers prayer requests, follows up, and keeps a list of the prayers God answered
 • Finds Bible passages for what you're going through
 
 REAL SCRIPTURE, NOT MADE-UP VERSES
@@ -74,9 +75,9 @@ Deploy the web app first (see submission-guide.md); these pages are part of it.
 ## Screenshots
 `screenshots/` has five 1320 × 2868 PNGs, the 6.9" iPhone size, which App Store Connect scales down for smaller iPhones. Upload in this order:
 1. `1-welcome.png`: meet the cast
-2. `2-pick-companion.png`: choosing Sola, with her story
-3. `3-chat-bram-checkin.png`: Bram's evening accountability check-in with real Scripture
-4. `4-chat-lumi-comfort.png`: Lumi comforting someone on a hard anniversary
-5. `5-focus.png`: choosing what you want help with
+2. `2-home.png`: Pip's home, with today's commitment, streak, prayer list and verse
+3. `3-pick-companion.png`: choosing Sola, with her story
+4. `4-chat-bram-checkin.png`: Bram's evening accountability check-in with real Scripture
+5. `5-chat-lumi-comfort.png`: Lumi comforting someone on a hard anniversary
 
 They're rendered from the real app screens with demo conversations. Once you have a TestFlight build, real device screenshots are a nice upgrade, but these are valid.

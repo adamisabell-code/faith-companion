@@ -5,7 +5,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Body, Button, H1, Screen } from "@/components/ui";
 import { useOnboarding } from "@/lib/onboarding";
-import { defaultTranslation, traditionIdFor } from "@/lib/profileDefaults";
+import { traditionIdFor } from "@/lib/profileDefaults";
 import { claimPushToken } from "@/lib/pushToken";
 import { deviceTimezone, useSession } from "@/lib/session";
 import { colors, companions, fonts } from "@/lib/theme";
@@ -30,7 +30,7 @@ export default function Consent() {
       first_name: draft.firstName.trim(),
       tradition_choice: draft.tradition,
       tradition_id: traditionIdFor(draft.tradition),
-      translation_id: defaultTranslation(draft.tradition),
+      translation_id: draft.translation,
       faith_stage: draft.faithStage,
       companion_id: draft.companion,
       focus_areas: draft.focus,

@@ -1,7 +1,7 @@
 ---
 id: catholic
 name: Catholic
-default_translation: DRA
+default_translation: WEB
 uses_deuterocanon: true
 reviewed_by: null
 ---

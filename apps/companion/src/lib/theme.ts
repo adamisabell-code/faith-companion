@@ -82,10 +82,10 @@ export const traditions = [
 export const traditionsWithProfiles = new Set(["nondenominational", "baptist", "catholic"]);
 
 export const translations = [
-  { id: "BSB", label: "Berean Standard (modern)" },
-  { id: "KJV", label: "King James" },
-  { id: "WEB", label: "World English" },
-  { id: "DRA", label: "Douay-Rheims (Catholic)" },
+  { id: "BSB", label: "Berean Standard", sub: "Modern, easy to read" },
+  { id: "WEB", label: "World English", sub: "Modern, includes the Catholic books" },
+  { id: "KJV", label: "King James", sub: "Classic 1611 English (thee and thou)" },
+  { id: "DRA", label: "Douay-Rheims", sub: "Classic Catholic English" },
 ] as const;
 
 export const focusAreas = [

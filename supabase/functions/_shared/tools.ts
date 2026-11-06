@@ -153,6 +153,9 @@ export async function runTool(name: string, input: any, ctx: ToolContext, messag
       if (!data?.length) {
         return { error: `No text found for ${input.book} ${input.chapter}:${start}${end !== start ? "-" + end : ""} in ${translation}. Don't guess the wording; give the reference only or check the book code.` };
       }
+      if (translation === "DRA" && String(input.book).toUpperCase() === "PSA") {
+        note = (note ? note + " " : "") + "Douay-Rheims numbers most Psalms one lower than other Bibles (e.g. Psalm 23 is 22 here). Check the text is the psalm you meant; if not, look up the adjusted number or use WEB.";
+      }
       return { translation, note, verses: data.map((v: { verse: number; text: string }) => ({ verse: v.verse, text: v.text })), book: data[0].book_name, chapter: data[0].chapter };
     }
 

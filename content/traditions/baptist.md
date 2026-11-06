@@ -1,7 +1,7 @@
 ---
 id: baptist
 name: Baptist
-default_translation: KJV
+default_translation: BSB
 uses_deuterocanon: false
 reviewed_by: null
 ---

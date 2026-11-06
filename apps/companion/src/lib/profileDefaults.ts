@@ -5,10 +5,11 @@ export function traditionIdFor(choice: string): string | null {
   return traditionsWithProfiles.has(choice) ? choice : null;
 }
 
-/** Sensible default translation for a tradition until the user picks one. */
+/**
+ * Preselected translation for a tradition: modern English for everyone.
+ * Catholic and Orthodox Bibles include extra books, which World English has.
+ */
 export function defaultTranslation(choice: string): string {
-  if (choice === "catholic") return "DRA";
-  if (choice === "baptist") return "KJV";
-  if (choice === "orthodox") return "WEB";
+  if (choice === "catholic" || choice === "orthodox") return "WEB";
   return "BSB";
 }

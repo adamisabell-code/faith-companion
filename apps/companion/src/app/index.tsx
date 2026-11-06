@@ -21,5 +21,5 @@ export default function Index() {
   if (!session) return <Redirect href="/welcome" />;
   if (profileLoading) return null; // wait for the profile before choosing a screen
   if (!profile?.onboarded_at) return <Redirect href="/onboarding/about" />;
-  return <Redirect href="/chat" />;
+  return <Redirect href="/home" />;
 }

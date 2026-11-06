@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import { CompanionPicker } from "@/components/CompanionPicker";
 import { TimeCard } from "@/components/TimeCard";
-import { Body, Button, Chip, Field, H1, Label, Screen } from "@/components/ui";
+import { Body, Button, Chip, Field, H1, Label, OptionRow, Screen } from "@/components/ui";
 import { deleteAccount } from "@/lib/api";
 import { SUPPORT_EMAIL } from "@/lib/config";
 import { traditionIdFor } from "@/lib/profileDefaults";
@@ -79,7 +79,7 @@ export default function Settings() {
   }
 
   return (
-    <Screen footer={<Button title="Done" onPress={() => (router.canGoBack() ? router.back() : router.replace("/chat"))} />}>
+    <Screen footer={<Button title="Done" onPress={() => (router.canGoBack() ? router.back() : router.replace("/home"))} />}>
       <H1>Settings</H1>
       {message ? <Text accessibilityRole="alert" style={st.msg}>{message}</Text> : null}
 
@@ -97,11 +97,9 @@ export default function Settings() {
           ))}
         </View>
         <Label>Bible translation</Label>
-        <View style={st.wrap}>
-          {translations.map((t) => (
-            <Chip key={t.id} label={t.label} selected={profile.translation_id === t.id} onPress={() => save("translation", { translation_id: t.id })} />
-          ))}
-        </View>
+        {translations.map((t) => (
+          <OptionRow key={t.id} title={t.label} sub={t.sub} selected={profile.translation_id === t.id} onPress={() => save("translation", { translation_id: t.id })} />
+        ))}
         <Body style={{ fontSize: 13 }}>NIV, ESV and NLT are coming once licensing is in place.</Body>
       </Section>
 

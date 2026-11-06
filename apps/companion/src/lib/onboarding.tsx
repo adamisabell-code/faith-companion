@@ -6,6 +6,8 @@ export type Draft = {
   firstName: string;
   tradition: string;        // what they picked, e.g. "methodist"
   faithStage: string;
+  translation: string;      // "BSB" | "WEB" | "KJV" | "DRA"
+  translationTouched: boolean; // user picked one themselves (don't auto-change it)
   companion: CompanionId;
   focus: string[];
   morning: string;          // "07:00"
@@ -17,6 +19,8 @@ const initial: Draft = {
   firstName: "",
   tradition: "nondenominational",
   faithStage: "growing",
+  translation: "BSB",
+  translationTouched: false,
   companion: "pip",
   focus: [],
   morning: "07:00",

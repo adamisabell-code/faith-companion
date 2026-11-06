@@ -1,4 +1,4 @@
-import { Redirect, router } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
@@ -16,10 +16,11 @@ type Msg = { id: string; role: "user" | "assistant"; content: string; pending?: 
 
 export default function Chat() {
   const { session, profile, profileLoading } = useSession();
+  const params = useLocalSearchParams<{ prefill?: string }>();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(true);
   const [thinking, setThinking] = useState(false);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(typeof params.prefill === "string" ? params.prefill : "");
   const [error, setError] = useState<string | null>(null);
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [reported, setReported] = useState<Set<string>>(new Set());
@@ -100,6 +101,9 @@ export default function Chat() {
     <SafeAreaView style={[st.safe, { backgroundColor: c.tint }]} edges={["top", "bottom"]}>
       <KeyboardAvoidingView style={st.column} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={[st.header, { backgroundColor: c.tile }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back to home" onPress={() => (router.canGoBack() ? router.back() : router.replace("/home"))} style={st.iconBtn}>
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 18l-6-6 6-6" /></Svg>
+          </Pressable>
           <View style={st.avatar}><Character id={companionId} size={40} /></View>
           <View style={{ flex: 1 }}>
             <Text style={st.name} accessibilityRole="header">{c.name}</Text>
@@ -177,7 +181,7 @@ export default function Chat() {
 const st = StyleSheet.create({
   safe: { flex: 1 },
   column: { flex: 1, width: "100%", maxWidth: 640, alignSelf: "center" },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  header: { flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 4, paddingRight: 12, paddingVertical: 10 },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(255,255,255,0.6)", alignItems: "center", justifyContent: "center" },
   name: { fontFamily: fonts.display, fontSize: 20, color: colors.ink },
   sub: { fontFamily: fonts.bodySemi, fontSize: 13, color: "#3D4250" },
