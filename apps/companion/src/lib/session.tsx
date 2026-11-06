@@ -18,12 +18,15 @@ export type Profile = {
   timezone: string;
   push_token: string | null;
   onboarded_at: string | null;
+  ai_consent_at: string | null;
 };
 
 type Ctx = {
   ready: boolean;
   session: Session | null;
   profile: Profile | null;
+  /** True while the signed-in user's profile hasn't been fetched yet. */
+  profileLoading: boolean;
   refreshProfile: () => Promise<Profile | null>;
   saveProfile: (patch: Partial<Profile>) => Promise<{ error?: string }>;
 };
@@ -38,11 +41,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  // Which user the current `profile` belongs to. Prevents routing on a stale/empty profile.
+  const [profileFor, setProfileFor] = useState<string | null>(null);
 
   const loadProfile = useCallback(async (userId: string | undefined) => {
-    if (!userId) { setProfile(null); return null; }
+    if (!userId) { setProfile(null); setProfileFor(null); return null; }
     const { data } = await supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle();
     setProfile((data as Profile) ?? null);
+    setProfileFor(userId);
     return (data as Profile) ?? null;
   }, []);
 
@@ -64,7 +70,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Keep the stored time zone current (people travel; check-ins follow them).
   useEffect(() => {
     const tz = deviceTimezone();
-    if (profile && profile.timezone !== tz) {
+    if (profile?.onboarded_at && profile.timezone !== tz) {
       supabase.from("profiles").update({ timezone: tz }).eq("user_id", profile.user_id).then(() => {});
     }
   }, [profile]);
@@ -82,7 +88,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [session, loadProfile]);
 
   return (
-    <SessionContext.Provider value={{ ready, session, profile, refreshProfile, saveProfile }}>
+    <SessionContext.Provider value={{
+      ready, session, profile, refreshProfile, saveProfile,
+      profileLoading: !!session && profileFor !== session.user.id,
+    }}>
       {children}
     </SessionContext.Provider>
   );

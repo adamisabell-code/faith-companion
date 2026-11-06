@@ -5,9 +5,8 @@ import { CompanionSays } from "@/components/CompanionSays";
 import { TimeCard } from "@/components/TimeCard";
 import { Button, H1, Progress, Screen } from "@/components/ui";
 import { useOnboarding } from "@/lib/onboarding";
-import { defaultTranslation, traditionIdFor } from "@/lib/profileDefaults";
 import { pushSupported, registerForPush } from "@/lib/push";
-import { deviceTimezone, useSession } from "@/lib/session";
+import { timesValid } from "@/lib/times";
 import { colors, companions, fonts } from "@/lib/theme";
 
 const asks = {
@@ -26,42 +25,29 @@ const reminder = {
 
 export default function Times() {
   const { draft, update } = useOnboarding();
-  const { saveProfile } = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const c = companions[draft.companion];
 
-  async function finish(askForPush: boolean) {
-    setBusy(true); setError(null);
+  async function next(askForPush: boolean) {
+    setError(null);
+    if (!timesValid(draft.morning, draft.evening)) return setError("Your morning check-in needs to come before your evening one.");
+    setBusy(true);
     const token = askForPush ? await registerForPush() : null;
-    const res = await saveProfile({
-      first_name: draft.firstName.trim(),
-      tradition_choice: draft.tradition,
-      tradition_id: traditionIdFor(draft.tradition),
-      translation_id: defaultTranslation(draft.tradition),
-      faith_stage: draft.faithStage,
-      companion_id: draft.companion,
-      focus_areas: draft.focus,
-      morning_time: `${draft.morning}:00`,
-      evening_time: `${draft.evening}:00`,
-      timezone: deviceTimezone(),
-      push_token: token,
-      onboarded_at: new Date().toISOString(),
-    });
+    update({ pushToken: token });
     setBusy(false);
-    if (res.error) return setError(res.error);
-    router.replace("/chat");
+    router.push("/consent");
   }
 
   return (
     <Screen
       footer={pushSupported ? (
         <>
-          <Button title="Allow notifications" loading={busy} onPress={() => finish(true)} />
-          <Button kind="link" title="Not now" onPress={() => finish(false)} disabled={busy} />
+          <Button title="Allow notifications" loading={busy} onPress={() => next(true)} />
+          <Button kind="link" title="Not now" onPress={() => next(false)} disabled={busy} />
         </>
       ) : (
-        <Button title="Start" loading={busy} onPress={() => finish(false)} />
+        <Button title="Continue" loading={busy} onPress={() => next(false)} />
       )}
     >
       <Progress step={4} of={4} />

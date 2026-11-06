@@ -10,6 +10,7 @@ export type Draft = {
   focus: string[];
   morning: string;          // "07:00"
   evening: string;          // "20:30"
+  pushToken: string | null; // set on the times screen if they allow notifications
 };
 
 const initial: Draft = {
@@ -20,6 +21,7 @@ const initial: Draft = {
   focus: [],
   morning: "07:00",
   evening: "20:30",
+  pushToken: null,
 };
 
 const Ctx = createContext<{ draft: Draft; update: (p: Partial<Draft>) => void } | null>(null);

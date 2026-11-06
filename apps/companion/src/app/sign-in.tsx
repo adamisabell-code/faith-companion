@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Body, Button, Field, H1, Screen } from "@/components/ui";
+import { WEB_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
 
@@ -48,7 +49,8 @@ export default function SignIn() {
     setError(null); setNotice(null);
     const e = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(e)) return setError("Enter your email first, then tap Forgot password.");
-    const { error } = await supabase.auth.resetPasswordForEmail(e);
+    // The reset link always opens the web app's reset page (works from any phone's browser).
+    const { error } = await supabase.auth.resetPasswordForEmail(e, { redirectTo: `${WEB_URL}/reset-password` });
     if (error) setError(error.message);
     else setNotice("If that email has an account, a reset link is on its way.");
   }

@@ -17,7 +17,7 @@ export const privacy: Doc = {
         "Account details: your email address and a password (stored only as a secure hash by our authentication provider).",
         "What you tell us during setup: first name, church tradition, where you are with faith, what you'd like help with, preferred Bible translation, check-in times and time zone.",
         "Your conversations with your companion, and what the companion saves from them so it can follow up: daily commitments, prayer requests, and short notes it remembers (like the name of someone you're praying for).",
-        "A push notification token, if you turn on reminders, so we can send your check-ins.",
+        "A push notification token, if you turn on reminders, so we can send your check-ins. Notification text is kept general (for example, \"Bram is checking in on your day\") so nothing private shows on your lock screen.",
         "Safety and quality records: if a conversation involves a crisis topic we record that it happened (not a copy of the conversation), and if you report a reply we keep that reply so we can review it.",
       ],
     },
@@ -35,7 +35,7 @@ export const privacy: Doc = {
       paragraphs: ["We use a small number of service providers who process data on our behalf, only to run the app:"],
       bullets: [
         "Supabase: hosts our database and handles sign-in.",
-        "Anthropic: the AI model that writes your companion's replies. Your recent messages and the context the companion needs are sent with each reply request. Anthropic does not use API data to train its models by default.",
+        "Anthropic: the AI model that writes your companion's replies. Only after you agree on the consent screen, your recent messages and the context the companion needs are sent with each reply request. Anthropic does not use API data to train its models by default.",
         "Voyage AI: turns short search phrases into a format used to find relevant Bible passages.",
         "Expo, Apple and Google: deliver push notifications.",
         "Vercel: hosts the web version of the app.",

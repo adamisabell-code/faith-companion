@@ -36,6 +36,7 @@ App Store Connect → App Information → Age Rating → Edit. Answer the questi
 The app's own terms set **13+** as the minimum age, so pick a rating of at least 13+ even if the questionnaire suggests lower.
 
 ## Things App Review commonly checks, already handled
+- **Consent before sharing data with third-party AI** (guideline 5.1.2(i)): the `/consent` screen at the end of setup names Anthropic and Voyage AI, says what's sent, and requires "I agree". The server refuses AI calls until `ai_consent_at` is set.
 - **Account deletion in the app** (guideline 5.1.1(v)): Settings → Delete my account. It deletes the account and all data on the server, not just a sign-out.
 - **Sign in with Apple**: not required. The app uses its own email and password and no third-party or social logins.
 - **Reporting objectionable AI content**: long-press any companion reply → "Report this reply". Reports are saved in the `message_reports` table.

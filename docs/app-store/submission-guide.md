@@ -6,7 +6,7 @@ Work through these in order. Each step says where you do it, and what you should
 
 ## Part 1: Update the backend (Supabase), about 15 minutes
 
-1. **Run the new database migration.** In Supabase → **SQL Editor**, paste and run `supabase/migrations/20261106020000_app.sql`. It adds the onboarding fields, check-in de-duplication, and reply reports. Expect "Success."
+1. **Run the two new database migrations, in order.** In Supabase → **SQL Editor**, paste and run `supabase/migrations/20261106020000_app.sql`, then `supabase/migrations/20261106030000_hardening.sql`. They add onboarding and AI-consent fields, check-in de-duplication, reply reports, time zone and check-in time safeguards, and safe push-token handling. Expect "Success." each time. If you connected GitHub in Supabase, check Table Editor first; they may already be applied.
 2. **Deploy all three server functions** from the repo folder in PowerShell:
    ```powershell
    git pull
@@ -17,7 +17,7 @@ Work through these in order. Each step says where you do it, and what you should
 3. **Add the cron secret.** Supabase → **Edge Functions → Secrets** → add `CRON_SECRET` with any long random string (a password generator works).
 4. **Turn on scheduling.** Supabase → **Integrations** (or **Database → Extensions**): enable **pg_cron** and **pg_net**.
 5. **Schedule check-ins.** Open `supabase/cron.sql`, replace `<PROJECT-REF>` and `<CRON_SECRET>`, then run it in the SQL Editor. It calls the sender every 10 minutes.
-6. **Auth settings.** Supabase → **Authentication → URL Configuration**: set Site URL to your web app address (from Part 2) so password-reset links work. Under **Sign In / Providers → Email**, decide whether to require email confirmation. Off is easiest for testing; turn it on before real users.
+6. **Auth settings.** Supabase → **Authentication → URL Configuration**: set Site URL to your web app address (from Part 2), and add `https://<your-web-address>/reset-password` under Redirect URLs so password-reset links work. Under **Sign In / Providers → Email**, decide whether to require email confirmation. Off is easiest for testing; turn it on before real users.
 
 ## Part 2: Put the web app online (Vercel), about 15 minutes
 
@@ -37,7 +37,7 @@ Work through these in order. Each step says where you do it, and what you should
 ## Part 3: Fill in the launch details, about 10 minutes
 
 Search the repo for `TODO(launch)`:
-- `apps/companion/src/lib/config.ts`: app name, **support email** (must be a real inbox), legal entity name.
+- `apps/companion/src/lib/config.ts`: app name, **support email** (must be a real inbox), legal entity name, and `WEB_URL` (your web app address, used by password-reset emails).
 - `apps/companion/app.json`: `name` (shown under the icon). The bundle ID `com.isabellholdings.faithcompanion` is permanent after the first App Store upload, so change it now if you want something else.
 - Read the Privacy Policy and Terms at `/privacy` and `/terms`. A quick review by a lawyer before public launch is wise.
 

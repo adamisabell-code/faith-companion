@@ -3,6 +3,16 @@
 // then what the companion knows about this user right now.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
+/** A valid IANA time zone, falling back to Central if the stored value is bad. */
+export function safeTz(tz: string | null | undefined): string {
+  if (!tz) return "America/Chicago";
+  try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return tz; } catch { return "America/Chicago"; }
+}
+
+export class ConsentRequired extends Error {
+  constructor() { super("Please review and accept how your messages are handled before chatting."); }
+}
+
 export type UserContext = {
   system: string;
   translation: string;
@@ -14,11 +24,13 @@ export type UserContext = {
 export async function buildContext(db: SupabaseClient, userId: string, now = new Date()): Promise<UserContext> {
   const { data: p, error } = await db
     .from("profiles")
-    .select("first_name, faith_stage, focus_areas, translation_id, timezone, morning_time, evening_time, companions(*), traditions(*)")
+    .select("first_name, faith_stage, focus_areas, translation_id, timezone, morning_time, evening_time, ai_consent_at, companions(*), traditions(*)")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
   if (!p) throw new Error("No profile for this user yet. Finish onboarding first.");
+  // Nothing goes to the AI provider without the user's explicit permission.
+  if (!p.ai_consent_at) throw new ConsentRequired();
 
   // deno-lint-ignore no-explicit-any
   const companion = p.companions as any;
@@ -26,7 +38,7 @@ export async function buildContext(db: SupabaseClient, userId: string, now = new
   const tradition = p.traditions as any;
   if (!companion) throw new Error("No companion picked yet.");
 
-  const tz = p.timezone || "America/Chicago";
+  const tz = safeTz(p.timezone);
   const today = now.toLocaleDateString("en-CA", { timeZone: tz });
   const localTime = now.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
   const weekday = now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long" });

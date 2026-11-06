@@ -6,7 +6,7 @@ import { useSession } from "@/lib/session";
 import { supabaseConfigured } from "@/lib/supabase";
 
 export default function Index() {
-  const { session, profile } = useSession();
+  const { session, profile, profileLoading } = useSession();
 
   if (!supabaseConfigured) {
     return (
@@ -19,6 +19,7 @@ export default function Index() {
   }
 
   if (!session) return <Redirect href="/welcome" />;
+  if (profileLoading) return null; // wait for the profile before choosing a screen
   if (!profile?.onboarded_at) return <Redirect href="/onboarding/about" />;
   return <Redirect href="/chat" />;
 }

@@ -37,7 +37,7 @@ export async function registerForPush(): Promise<string | null> {
   if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
   if (status !== "granted") return null;
 
-  const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+  const projectId = Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId;
   if (!projectId) {
     console.warn("No EAS projectId yet. Run `npx eas-cli@latest init` in apps/companion.");
     return null;

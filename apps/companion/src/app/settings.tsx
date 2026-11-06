@@ -8,6 +8,8 @@ import { deleteAccount } from "@/lib/api";
 import { SUPPORT_EMAIL } from "@/lib/config";
 import { traditionIdFor } from "@/lib/profileDefaults";
 import { pushSupported, registerForPush } from "@/lib/push";
+import { claimPushToken } from "@/lib/pushToken";
+import { timesValid } from "@/lib/times";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, traditions, translations, type CompanionId } from "@/lib/theme";
@@ -15,7 +17,7 @@ import { colors, fonts, traditions, translations, type CompanionId } from "@/lib
 const hhmm = (t: string | null | undefined, fallback: string) => (t ? t.slice(0, 5) : fallback);
 
 export default function Settings() {
-  const { session, profile, saveProfile } = useSession();
+  const { session, profile, saveProfile, refreshProfile } = useSession();
   const [name, setName] = useState(profile?.first_name ?? "");
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,13 +36,32 @@ export default function Settings() {
   }
 
   async function toggleReminders() {
-    if (profile!.push_token) return save("push", { push_token: null });
+    setSaving("push"); setMessage(null);
+    if (profile!.push_token) {
+      await save("push", { push_token: null });
+      return;
+    }
     const token = await registerForPush();
-    if (!token) return setMessage("Notifications are off for this app. You can turn them on in your phone's Settings.");
-    await save("push", { push_token: token });
+    if (!token) {
+      setSaving(null);
+      return setMessage("Notifications are off for this app. You can turn them on in your phone's Settings.");
+    }
+    const r = await claimPushToken(token);
+    if (r.error) setMessage(r.error);
+    await refreshProfile();
+    setSaving(null);
+  }
+
+  function setTime(which: "morning" | "evening", v: string) {
+    const morning = which === "morning" ? v : hhmm(profile!.morning_time, "07:00");
+    const evening = which === "evening" ? v : hhmm(profile!.evening_time, "20:30");
+    if (!timesValid(morning, evening)) return setMessage("Your morning check-in needs to come before your evening one.");
+    save(which, which === "morning" ? { morning_time: `${v}:00` } : { evening_time: `${v}:00` });
   }
 
   async function signOut() {
+    // Stop this device from receiving this account's check-ins.
+    if (profile?.push_token) await saveProfile({ push_token: null });
     await supabase.auth.signOut();
     router.replace("/welcome");
   }
@@ -85,8 +106,8 @@ export default function Settings() {
       </Section>
 
       <Section title="Check-ins">
-        <TimeCard label="Morning" hint="Set today's commitment" value={hhmm(profile.morning_time, "07:00")} onChange={(v) => save("morning", { morning_time: `${v}:00` })} accent="#8A4A26" />
-        <TimeCard label="Evening" hint="Check in on how it went" value={hhmm(profile.evening_time, "20:30")} onChange={(v) => save("evening", { evening_time: `${v}:00` })} accent="#2F5778" />
+        <TimeCard label="Morning" hint="Set today's commitment" value={hhmm(profile.morning_time, "07:00")} onChange={(v) => setTime("morning", v)} accent="#8A4A26" />
+        <TimeCard label="Evening" hint="Check in on how it went" value={hhmm(profile.evening_time, "20:30")} onChange={(v) => setTime("evening", v)} accent="#2F5778" />
         {pushSupported ? (
           <Button kind="secondary" loading={saving === "push"} title={profile.push_token ? "Turn off reminders" : "Turn on reminders"} onPress={toggleReminders} />
         ) : (

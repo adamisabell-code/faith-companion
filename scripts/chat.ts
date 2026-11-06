@@ -38,6 +38,8 @@ async function setProfile(patch: Record<string, unknown>) {
     faith_stage: "growing",
     focus_areas: ["prayer", "relationship"],
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    onboarded_at: new Date().toISOString(),
+    ai_consent_at: new Date().toISOString(), // test user: consent given
     ...patch,
   });
   if (error) throw error;

@@ -19,7 +19,7 @@ A Christian prayer and accountability companion. The user picks one of four illu
 
 HOW TO TEST
 1. Sign in with the demo account above (or create a new account with any email).
-2. You'll land in the chat. Try: "I'm worried about a job interview tomorrow, can you pray for me?" or "What does the Bible say about worry?"
+2. You'll land in the chat. (A brand-new account goes through a short setup, ending with a screen that explains what is sent to the AI provider and asks for permission. Chat is unavailable until the user agrees.) Try: "I'm worried about a job interview tomorrow, can you pray for me?" or "What does the Bible say about worry?"
 3. Settings (gear icon, top right) lets you switch companions, change Bible translation and check-in times, and turn reminders on or off.
 4. Push notifications: reminders are sent at the user's chosen morning and evening times.
 
@@ -30,6 +30,7 @@ SAFETY AND ACCURACY
 - Users can report any AI reply: long-press the reply, then tap "Report this reply".
 
 PRIVACY
+- Before any personal data is sent to the AI provider, a dedicated screen names Anthropic (and Voyage AI for verse search), explains what is shared, and asks for explicit permission (guideline 5.1.2(i)). The server refuses to call the AI for accounts without this consent.
 - Chats are private to the user and never shown to other users.
 - No ads, no tracking, no data sales.
 - Account deletion: Settings → Delete my account (permanent, removes all data on our servers).

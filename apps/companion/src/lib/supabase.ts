@@ -10,7 +10,8 @@ if (!url || !key) {
   console.warn("Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY (see .env.example)");
 }
 
-export const supabaseConfigured = Boolean(url && key);
+// Placeholder values (from .env.example / eas.json) count as "not configured".
+export const supabaseConfigured = Boolean(url && key && !/YOUR-REF|REPLACE_ME|sb_publishable_xxx/.test(`${url}${key}`));
 
 export const supabase = createClient(url ?? "https://placeholder.supabase.co", key ?? "placeholder", {
   auth: {

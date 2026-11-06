@@ -21,7 +21,7 @@ function Gate({ fontsReady }: { fontsReady: boolean }) {
   // Tapping a check-in notification opens the chat.
   useEffect(() => {
     if (!pushSupported) return;
-    const sub = Notifications.addNotificationResponseReceivedListener(() => router.push("/chat"));
+    const sub = Notifications.addNotificationResponseReceivedListener(() => router.navigate("/chat"));
     return () => sub.remove();
   }, []);
   if (!show) return null;

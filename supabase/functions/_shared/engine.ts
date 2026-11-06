@@ -1,7 +1,7 @@
 // The companion "engine": one conversational turn, plus check-in timing.
 // Used by the chat function (user messages, app opens) and send-checkins (scheduled pushes).
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { buildContext, checkinCue, type CheckinKind } from "./prompt.ts";
+import { buildContext, checkinCue, safeTz, type CheckinKind } from "./prompt.ts";
 import { runTool, toolDefs } from "./tools.ts";
 
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -117,9 +117,9 @@ export async function runTurn(userId: string, opts: { message?: string; checkin?
 
 export type ProfileTiming = { user_id: string; timezone: string | null; morning_time: string; evening_time: string };
 
-export function localNow(tz: string, now = new Date()) {
+export function localNow(tz: string | null | undefined, now = new Date()) {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    new Intl.DateTimeFormat("en-CA", { timeZone: safeTz(tz), year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
       .formatToParts(now).map((p) => [p.type, p.value]),
   );
   return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: Number(parts.hour) * 60 + Number(parts.minute) };
@@ -133,8 +133,7 @@ const toMinutes = (t: string) => { const [h, m] = t.split(":").map(Number); retu
  * a window so nobody gets a "good morning" at noon; app opens use no limit).
  */
 export async function dueCheckin(p: ProfileTiming, now = new Date(), windowMinutes?: number): Promise<CheckinKind | null> {
-  const tz = p.timezone || "America/Chicago";
-  const { date, minutes } = localNow(tz, now);
+  const { date, minutes } = localNow(p.timezone, now);
 
   const [{ count: anyMessages }, { data: todays }] = await Promise.all([
     admin.from("messages").select("id", { count: "exact", head: true }).eq("user_id", p.user_id),
@@ -159,12 +158,31 @@ export async function dueCheckin(p: ProfileTiming, now = new Date(), windowMinut
 }
 
 /** Reserve today's check-in so it only ever happens once. Returns false if already taken. */
-export async function claimCheckin(userId: string, kind: CheckinKind, tz: string, now = new Date()): Promise<boolean> {
-  const { date } = localNow(tz || "America/Chicago", now);
+export async function claimCheckin(userId: string, kind: CheckinKind, tz: string | null, now = new Date()): Promise<boolean> {
+  const { date } = localNow(tz, now);
   const { error } = await admin.from("check_ins").insert({
     user_id: userId, kind, local_date: date, scheduled_for: now.toISOString(), sent_at: now.toISOString(),
   });
   if (!error) return true;
   if (error.code === "23505") return false; // unique violation: already done today
   throw error;
+}
+
+/** Undo a claim when the check-in couldn't be delivered, so it can be retried. */
+export async function releaseCheckin(userId: string, kind: CheckinKind, tz: string | null, now = new Date()) {
+  const { date } = localNow(tz, now);
+  await admin.from("check_ins").delete().eq("user_id", userId).eq("kind", kind).eq("local_date", date);
+}
+
+/** Simple per-user limits so one account can't run up the AI bill. */
+export async function overRateLimit(userId: string): Promise<string | null> {
+  const minuteAgo = new Date(Date.now() - 60_000).toISOString();
+  const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+  const [{ count: perMinute }, { count: perDay }] = await Promise.all([
+    admin.from("messages").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("role", "user").gte("created_at", minuteAgo),
+    admin.from("messages").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("role", "user").gte("created_at", dayAgo),
+  ]);
+  if ((perMinute ?? 0) >= 8) return "You're sending messages really fast. Take a breath and try again in a minute.";
+  if ((perDay ?? 0) >= 300) return "You've reached today's message limit. Your companion will be here tomorrow.";
+  return null;
 }

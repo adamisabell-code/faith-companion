@@ -15,7 +15,7 @@ import { colors, companions, fonts } from "@/lib/theme";
 type Msg = { id: string; role: "user" | "assistant"; content: string; pending?: boolean };
 
 export default function Chat() {
-  const { session, profile } = useSession();
+  const { session, profile, profileLoading } = useSession();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(true);
   const [thinking, setThinking] = useState(false);
@@ -36,7 +36,7 @@ export default function Chat() {
 
   // On open: show history, then let the server add a check-in or first greeting if one is due.
   useEffect(() => {
-    if (!session || !profile?.onboarded_at) return;
+    if (!session || !profile?.onboarded_at || !profile.ai_consent_at) return;
     let alive = true;
     (async () => {
       await loadMessages();
@@ -52,7 +52,7 @@ export default function Chat() {
       }
     })();
     return () => { alive = false; };
-  }, [session, profile?.onboarded_at, loadMessages]);
+  }, [session, profile?.onboarded_at, profile?.ai_consent_at, loadMessages]);
 
   useEffect(() => {
     const t = setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
@@ -92,7 +92,9 @@ export default function Chat() {
   }
 
   if (!session) return <Redirect href="/welcome" />;
+  if (profileLoading) return null;
   if (!profile?.onboarded_at) return <Redirect href="/onboarding/about" />;
+  if (!profile.ai_consent_at) return <Redirect href="/consent" />;
 
   return (
     <SafeAreaView style={[st.safe, { backgroundColor: c.tint }]} edges={["top", "bottom"]}>
