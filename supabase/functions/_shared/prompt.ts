@@ -76,9 +76,14 @@ ${(memories.data ?? []).map((m) => `- ${m.fact}`).join("\n") || "- nothing yet"}
   };
 }
 
-// Synthetic user turn for scheduled check-ins (not stored as a user message).
-export function checkinCue(kind: "morning" | "evening", name: string): string {
+export type CheckinKind = "first" | "morning" | "evening";
+
+// Synthetic user turn for check-ins (not stored as a user message).
+export function checkinCue(kind: CheckinKind, name: string): string {
+  if (kind === "first") {
+    return `[${name} just finished setting up the app and is opening the chat with you for the first time. Introduce yourself in character in 2-3 short sentences, set expectations (you'll check in each morning and evening), then help them pick one small, concrete commitment for today based on what they said they want help with. Keep it short.]`;
+  }
   return kind === "morning"
-    ? `[It's ${name}'s scheduled morning check-in. Open the conversation in character: greet them briefly, mention any prayer request due for follow-up today, and help them set one small, concrete commitment for today.]`
-    : `[It's ${name}'s scheduled evening check-in. Open the conversation in character and ask how today's commitment went, naming it specifically. If there's no commitment for today, ask how their day went with God.]`;
+    ? `[It's ${name}'s scheduled morning check-in. Open the conversation in character: greet them briefly, mention any prayer request due for follow-up today, and help them set one small, concrete commitment for today. Keep it short.]`
+    : `[It's ${name}'s scheduled evening check-in. Open the conversation in character and ask how today's commitment went, naming it specifically. If there's no commitment for today, ask how their day went with God. Keep it short.]`;
 }

@@ -9,7 +9,8 @@
     "embed-verses": "tsx scripts/embed-verses.ts",
     "chat": "tsx scripts/chat.ts",
     "deploy-chat": "supabase functions deploy chat --no-verify-jwt",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy-functions": "supabase functions deploy --no-verify-jwt"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

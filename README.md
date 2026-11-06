@@ -2,7 +2,9 @@
 
 A Christian prayer and accountability companion app. Users pick one of four companions: **Pip** (mustard seed), **Bram** (donkey), **Sola** (sparrow), **Lumi** (lamb). They chat about life and Scripture, set a small commitment each morning, and get a check-in each evening.
 
-This repo holds the **data layer and the chat backend** (a Supabase Edge Function that talks to Claude). It runs in its own Supabase project, separate from Watt.
+This repo holds the **app** (`apps/companion`: one Expo codebase for web and iPhone), the **backend** (Supabase database + Edge Functions that talk to Claude), and the **App Store launch kit** (`docs/app-store/`). It runs in its own Supabase project, separate from Watt.
+
+**Launching? Start with [`docs/app-store/submission-guide.md`](docs/app-store/submission-guide.md).**
 
 ## How the AI "knows" things (no fine-tuning)
 
@@ -24,7 +26,14 @@ supabase/
   migrations/20261106000000_init.sql   tables, RLS, get_passage + match_verses
   migrations/20261106010000_prompts.sql  server-only table for the shared rules
   seed.sql                             translations + 73 books (66 + deuterocanon)
-  functions/chat/                      chat endpoint: prompt assembly, Claude call, tool loop
+  migrations/20261106020000_app.sql    onboarding fields, check-in de-dupe, reply reports
+  functions/_shared/                   the companion engine: prompt, tools, Claude loop, check-in timing
+  functions/chat/                      chat endpoint (messages + check-in on app open)
+  functions/send-checkins/             scheduled morning/evening check-ins + push
+  functions/delete-account/            in-app account deletion
+  cron.sql                             schedules send-checkins every 10 minutes
+apps/companion/                        the app (web + iOS), see its README
+docs/app-store/                        listing copy, screenshots, privacy label, review notes, launch guide
 content/
   shared-rules.md                      rules every companion follows (Scripture, safety, tradition)
   companions/{pip,bram,sola,lumi}.md   personality prompts + onboarding copy
@@ -90,7 +99,7 @@ Every profile is marked DRAFT and has `reviewed_by: null`. Have a pastor or prie
    ```bash
    npx supabase login
    npx supabase link --project-ref YOUR-REF
-   npm run deploy-chat
+   npm run deploy-functions   # chat, send-checkins, delete-account
    ```
 4. Test it: `npm run chat` (Bram, non-denominational), or `npm run chat -- lumi catholic`. Inside the chat, `/evening` and `/morning` trigger check-ins, `/companion sola` switches companions, `/reset` clears the test user's history.
 
@@ -100,5 +109,5 @@ Every profile is marked DRAFT and has `reviewed_by: null`. Have a pastor or prie
 
 ## Still to build
 
-- Check-in scheduler: a Supabase cron job that calls the chat function with `checkin` at each user's morning/evening time and sends the reply as a push notification.
-- The app itself: onboarding screens writing to `profiles` (designs in the Faith Buddy Cast canvas) and a chat screen calling the function.
+- Paid plans (Apple in-app purchase, e.g. via RevenueCat). The app launches free.
+- Methodist, Pentecostal and Orthodox tradition profiles; pastor review of all profiles.

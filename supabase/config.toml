@@ -1,7 +1,13 @@
 # Minimal Supabase CLI config for this project.
 project_id = "faith-companion"
 
+# Each function checks its caller itself (user access token, the dev tool's
+# secret key, or the cron secret), so the gateway's JWT check is turned off.
 [functions.chat]
-# The function checks the caller itself (user access token, or a secret key for
-# the dev test tool), so the gateway's JWT check is turned off.
+verify_jwt = false
+
+[functions.send-checkins]
+verify_jwt = false
+
+[functions.delete-account]
 verify_jwt = false

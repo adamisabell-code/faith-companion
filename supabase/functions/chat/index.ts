@@ -1,71 +1,40 @@
 // Chat endpoint: POST /functions/v1/chat
 //
-// App calls:   Authorization: Bearer <user's Supabase access token>
-//              body: { "message": "..." }  or  { "checkin": "morning" | "evening" }
-// Dev testing: Authorization: Bearer <service/secret key>
-//              body: { "dev_user_id": "<uuid>", "message": "..." }
-// Returns:     { "reply": "...", "tools_used": ["get_passage", ...] }
+// App calls (Authorization: Bearer <user's access token>):
+//   { "message": "..." }     the user typed something
+//   { "open": true }         the chat screen opened; the server adds a check-in if one is due
+// Dev test tool (Authorization: Bearer <secret key>):
+//   { "dev_user_id": "<uuid>", "message": "..." }  or  { "dev_user_id": "...", "checkin": "evening" }
+// Returns: { "reply": string | null, "message_id": string | null, "checkin": kind | null, "tools_used": [...] }
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { buildContext, checkinCue } from "./prompt.ts";
-import { runTool, toolDefs } from "./tools.ts";
+import { admin, claimCheckin, dueCheckin, runTurn } from "../_shared/engine.ts";
+import type { CheckinKind } from "../_shared/prompt.ts";
 
-const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-const MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5";
-const VOYAGE_KEY = Deno.env.get("VOYAGE_API_KEY") ?? undefined;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const HISTORY_LIMIT = 30;   // past messages sent to the model
-const MAX_TOOL_ROUNDS = 6;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
-
-// Figure out who is calling. Normal users send their access token; the dev
-// tool sends a secret key plus dev_user_id, which we verify by using that key
-// against the admin API (only a real secret key can do that).
-async function resolveUser(token: string, devUserId?: string): Promise<string | null> {
+// Normal users send their access token. The dev tool sends a secret key plus
+// dev_user_id, verified by using that key against the admin API.
+async function resolveUser(token: string, devUserId?: string): Promise<{ id: string; dev: boolean } | null> {
   if (devUserId) {
     const asKey = createClient(SUPABASE_URL, token, { auth: { persistSession: false } });
     const { data, error } = await asKey.auth.admin.getUserById(devUserId);
-    return !error && data?.user ? data.user.id : null;
+    return !error && data?.user ? { id: data.user.id, dev: true } : null;
   }
   const { data, error } = await admin.auth.getUser(token);
-  return !error && data?.user ? data.user.id : null;
-}
-
-type Block =
-  | { type: "text"; text: string }
-  | { type: "tool_use"; id: string; name: string; input: unknown }
-  | { type: "tool_result"; tool_use_id: string; content: string };
-type Msg = { role: "user" | "assistant"; content: string | Block[] };
-
-async function callClaude(system: string, messages: Msg[]) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_KEY!,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1024, system, tools: toolDefs, messages }),
-  });
-  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-  return await res.json() as { content: Block[]; stop_reason: string };
+  return !error && data?.user ? { id: data.user.id, dev: false } : null;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
-  if (!ANTHROPIC_KEY) return json({ error: "ANTHROPIC_API_KEY secret is not set in Supabase." }, 500);
 
   // deno-lint-ignore no-explicit-any
   let body: any;
@@ -73,84 +42,35 @@ Deno.serve(async (req) => {
 
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "Missing Authorization header." }, 401);
-  const userId = await resolveUser(token, body.dev_user_id);
-  if (!userId) return json({ error: "Not signed in." }, 401);
+  const who = await resolveUser(token, body.dev_user_id);
+  if (!who) return json({ error: "Not signed in." }, 401);
 
-  const message: string | undefined = typeof body.message === "string" ? body.message.trim() : undefined;
-  const checkin: "morning" | "evening" | undefined =
-    body.checkin === "morning" || body.checkin === "evening" ? body.checkin : undefined;
-  if (!message && !checkin) return json({ error: "Send a message or a checkin." }, 400);
+  const message = typeof body.message === "string" ? body.message.trim().slice(0, 4000) : "";
 
   try {
-    const ctx = await buildContext(admin, userId);
-
-    // Conversation history, oldest first. Keep only plain text turns.
-    const { data: past } = await admin.from("messages").select("role, content")
-      .eq("user_id", userId).order("created_at", { ascending: false }).limit(HISTORY_LIMIT);
-    const history: Msg[] = (past ?? []).reverse().map((m) => ({ role: m.role, content: m.content }));
-
-    // Store the user's message now so a safety log can point at it.
-    let userMessageId: string | undefined;
     if (message) {
-      const { data } = await admin.from("messages")
-        .insert({ user_id: userId, role: "user", content: message }).select("id").single();
-      userMessageId = data?.id;
+      const r = await runTurn(who.id, { message });
+      return json({ reply: r.reply, message_id: r.messageId, checkin: null, tools_used: r.toolsUsed });
     }
 
-    const firstName = (ctx.system.match(/- First name: (.+)/)?.[1] ?? "the user").trim();
-    const turn = message ?? checkinCue(checkin!, firstName);
+    // Check-in: forced by the dev tool, or decided by the server on app open.
+    let kind: CheckinKind | null = null;
+    const { data: p } = await admin.from("profiles")
+      .select("user_id, timezone, morning_time, evening_time, onboarded_at").eq("user_id", who.id).maybeSingle();
+    if (!p) return json({ error: "No profile yet. Finish setup first." }, 400);
 
-    // The API needs alternating roles starting with user; merge any repeats.
-    const messages: Msg[] = [];
-    for (const m of [...history, { role: "user" as const, content: turn }]) {
-      const last = messages[messages.length - 1];
-      if (last && last.role === m.role && typeof last.content === "string" && typeof m.content === "string") {
-        last.content += "\n\n" + m.content;
-      } else {
-        messages.push({ ...m });
-      }
+    if (who.dev && ["first", "morning", "evening"].includes(body.checkin)) kind = body.checkin;
+    else if (body.open) kind = await dueCheckin(p);
+    else return json({ error: "Send a message, or open: true." }, 400);
+
+    if (!kind) return json({ reply: null, message_id: null, checkin: null, tools_used: [] });
+
+    // Dev tool may repeat check-ins; real users get each one once per day.
+    if (!who.dev && !(await claimCheckin(who.id, kind, p.timezone))) {
+      return json({ reply: null, message_id: null, checkin: null, tools_used: [] });
     }
-    // History can start with a check-in opener from the companion; the API needs a user turn first.
-    if (messages[0]?.role === "assistant") messages.unshift({ role: "user", content: "[Earlier conversation]" });
-
-    const toolsUsed: string[] = [];
-    let reply = "";
-
-    for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-      const res = await callClaude(ctx.system, messages);
-      const text = res.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("\n").trim();
-      if (text) reply = text;
-      if (res.stop_reason !== "tool_use") break;
-
-      messages.push({ role: "assistant", content: res.content });
-      const results: Block[] = [];
-      for (const b of res.content) {
-        if (b.type !== "tool_use") continue;
-        toolsUsed.push(b.name);
-        let out: unknown;
-        try {
-          out = await runTool(b.name, b.input, {
-            db: admin, userId, translation: ctx.translation,
-            includeDeuterocanon: ctx.includeDeuterocanon, voyageKey: VOYAGE_KEY,
-          }, userMessageId);
-        } catch (e) {
-          out = { error: e instanceof Error ? e.message : String(e) };
-        }
-        results.push({ type: "tool_result", tool_use_id: b.id, content: JSON.stringify(out) });
-      }
-      messages.push({ role: "user", content: results });
-    }
-
-    if (!reply) reply = "Sorry, I lost my words for a second. Can you say that again?";
-
-    await admin.from("messages").insert({ user_id: userId, role: "assistant", content: reply });
-    if (checkin) {
-      await admin.from("check_ins").insert({
-        user_id: userId, kind: checkin, scheduled_for: new Date().toISOString(), sent_at: new Date().toISOString(),
-      });
-    }
-
-    return json({ reply, tools_used: toolsUsed });
+    const r = await runTurn(who.id, { checkin: kind });
+    return json({ reply: r.reply, message_id: r.messageId, checkin: kind, tools_used: r.toolsUsed });
   } catch (e) {
     console.error(e);
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
