@@ -49,15 +49,17 @@ evals/
    ```
 3. `cp .env.example .env` and fill it in, then `npm install`.
 4. Load companions and traditions: `npm run load-content`
-5. Download public-domain Bibles in **VPL** (verse-per-line) format from ebible.org into `./data` (gitignored):
-   - Berean Standard Bible: https://ebible.org/bible/details.php?id=engbsb
-   - King James Version, World English Bible (the edition *with* deuterocanon), Douay-Rheims: find each on ebible.org and pick the VPL download.
-6. Import each one:
+5. Download the public-domain Bibles (VPL format) from ebible.org and unzip each into `./data` (gitignored):
+   - BSB: https://eBible.org/Scriptures/engbsb_vpl.zip
+   - KJV: https://eBible.org/Scriptures/eng-kjv2006_vpl.zip
+   - WEB with deuterocanon: https://eBible.org/Scriptures/eng-web_vpl.zip
+   - Douay-Rheims 1899: https://eBible.org/Scriptures/engDRA_vpl.zip
+6. Import each one, pointing at the `.txt` file inside each unzipped folder:
    ```bash
-   npm run import-bible -- BSB data/engbsb_vpl.txt
-   npm run import-bible -- KJV data/<kjv>_vpl.txt
-   npm run import-bible -- WEB data/<web>_vpl.txt
-   npm run import-bible -- DRA data/<dra>_vpl.txt
+   npm run import-bible -- BSB data/engbsb_vpl/engbsb_vpl.txt
+   npm run import-bible -- KJV data/eng-kjv2006_vpl/eng-kjv2006_vpl.txt
+   npm run import-bible -- WEB data/eng-web_vpl/eng-web_vpl.txt
+   npm run import-bible -- DRA data/engDRA_vpl/engDRA_vpl.txt
    ```
 7. Build search embeddings: `npm run embed-verses` (BSB text, plus WEB for the deuterocanonical books).
 

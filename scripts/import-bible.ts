@@ -21,8 +21,10 @@ const { data: books, error: booksErr } = await db.from("books").select("id");
 if (booksErr) throw booksErr;
 const known = new Set(books!.map((b) => b.id as string));
 
-// Some ebible files use alternate codes for these books.
-const codeFix: Record<string, string> = { ESG: "EST", DAG: "DAN", PS2: "PSA" };
+// PS2 is Psalm 151 in some editions. Greek Esther (ESG) and Greek Daniel (DAG)
+// are separate files that reuse chapter/verse numbers, so they are skipped
+// rather than merged (merging would overwrite the regular Esther/Daniel text).
+const codeFix: Record<string, string> = { PS2: "PSA" };
 
 const line = /^([1-3]?[A-Z]{2,3}[0-9]?)\s+(\d+):(\d+)\s+(.*)$/;
 const rows: { translation_id: string; book_id: string; chapter: number; verse: number; text: string }[] = [];
@@ -36,7 +38,11 @@ for (const raw of readFileSync(file, "utf8").split(/\r?\n/)) {
     skipped.set(book, (skipped.get(book) ?? 0) + 1);
     continue;
   }
-  const text = m[4].replace(/\s+/g, " ").trim();
+  const text = m[4]
+    .replace(/<[^>]+>/g, "")   // stray markup
+    .replace(/\{[^}]*\}/g, "") // footnote/Strong's markers in some exports
+    .replace(/\s+/g, " ")
+    .trim();
   if (!text) continue;
   rows.push({ translation_id: translationId, book_id: book, chapter: +m[2], verse: +m[3], text });
 }
