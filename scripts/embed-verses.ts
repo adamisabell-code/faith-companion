@@ -40,15 +40,26 @@ async function existingKeys(): Promise<Set<string>> {
   return keys;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Retries on rate limits (429) and server errors, waiting longer each time.
 async function embed(texts: string[]): Promise<number[][]> {
-  const res = await fetch("https://api.voyageai.com/v1/embeddings", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, input: texts, input_type: "document", output_dimension: 1024 }),
-  });
-  if (!res.ok) throw new Error(`Voyage error ${res.status}: ${await res.text()}`);
-  const json = (await res.json()) as { data: { embedding: number[] }[] };
-  return json.data.map((d) => d.embedding);
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch("https://api.voyageai.com/v1/embeddings", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model, input: texts, input_type: "document", output_dimension: 1024 }),
+    });
+    if (res.ok) {
+      const json = (await res.json()) as { data: { embedding: number[] }[] };
+      return json.data.map((d) => d.embedding);
+    }
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt >= 8) throw new Error(`Voyage error ${res.status}: ${await res.text()}`);
+    const wait = Math.min(60_000, 2_000 * 2 ** (attempt - 1));
+    console.log(`  Voyage ${res.status}, waiting ${wait / 1000}s and retrying...`);
+    await sleep(wait);
+  }
 }
 
 const have = await existingKeys();
