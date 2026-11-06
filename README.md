@@ -1,4 +1,6 @@
-# Faith Companion
+# Amen Buddy
+
+(Working name. Repo, bundle ID and project names still say faith-companion.)
 
 A Christian prayer and accountability companion app. Users pick one of four companions: **Pip** (mustard seed), **Bram** (donkey), **Sola** (sparrow), **Lumi** (lamb). They chat about life and Scripture, set a small commitment each morning, and get a check-in each evening.
 

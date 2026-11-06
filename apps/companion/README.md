@@ -1,4 +1,4 @@
-# Faith Companion app
+# Amen Buddy app
 
 One Expo (React Native) codebase that runs as a **web app** (deployed on Vercel) and builds into the **iPhone app** (via Expo's cloud builds). The server side (chat, check-ins, account deletion) lives in `../../supabase/functions`.
 

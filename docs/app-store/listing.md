@@ -3,7 +3,10 @@
 Copy-paste into App Store Connect → your app → App Store tab. Limits are Apple's; every field below fits.
 
 ## Name (30 max)
-`Faith Companion`, a working name. **Pick the final name before the first submission.** It also goes in `apps/companion/app.json` (`name`) and `apps/companion/src/lib/config.ts` (`APP_NAME`). App names must be unique on the App Store; App Store Connect tells you if one is taken when you create the app.
+```
+Amen Buddy
+```
+A web search found no app with this exact name (Nov 2026), but App Store Connect is the real test. Create the app there soon to reserve the name; it says right away if it's taken. Also run a quick trademark search at the USPTO before you commit. If the name changes, update `apps/companion/app.json` (`name`) and `apps/companion/src/lib/config.ts` (`APP_NAME`).
 
 ## Subtitle (30 max)
 ```

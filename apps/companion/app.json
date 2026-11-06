@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Faith Companion",
+    "name": "Amen Buddy",
     "slug": "faith-companion",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,8 +34,8 @@
     "web": {
       "output": "single",
       "favicon": "./assets/favicon.png",
-      "name": "Faith Companion",
-      "shortName": "Companion",
+      "name": "Amen Buddy",
+      "shortName": "Amen Buddy",
       "themeColor": "#F5F2EC",
       "backgroundColor": "#F5F2EC"
     },
