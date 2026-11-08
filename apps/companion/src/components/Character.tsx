@@ -7,18 +7,26 @@ import type { CompanionId } from "@/lib/theme";
  * Pip literally grows (more leaves, then a flower); the others collect sparkles
  * and, at 30 days, a little crown (James 1:12, "the crown of life").
  */
-export function Character({ id, size = 96, stage = 1 }: { id: CompanionId; size?: number; stage?: 0 | 1 | 2 | 3 }) {
+export function Character({ id, size = 96, stage }: { id: CompanionId; size?: number; stage?: 0 | 1 | 2 | 3 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {id === "pip" && <Pip stage={stage} />}
+      {id === "pip" && <Pip stage={stage ?? 1} />}
       {id === "bram" && <Bram />}
       {id === "sola" && <Sola />}
       {id === "lumi" && <Lumi />}
-      {id !== "pip" && stage >= 1 && <Sparkle x={160} y={46} r={9} />}
-      {id !== "pip" && stage >= 2 && <Sparkle x={40} y={70} r={7} />}
-      {id !== "pip" && stage >= 3 && <Crown y={id === "bram" ? 40 : id === "sola" ? 52 : 44} />}
+      {id !== "pip" && stage !== undefined && stage >= 1 && <Sparkle x={160} y={46} r={9} />}
+      {id !== "pip" && stage !== undefined && stage >= 2 && <Sparkle x={40} y={70} r={7} />}
+      {id !== "pip" && stage !== undefined && stage >= 3 && <Crown y={id === "bram" ? 40 : id === "sola" ? 52 : 44} />}
     </Svg>
   );
+}
+
+/** Just the companion's drawing, for placing inside a larger SVG scene. */
+export function CompanionArt({ id, stage = 1 }: { id: CompanionId; stage?: 0 | 1 | 2 | 3 }) {
+  if (id === "pip") return <Pip stage={stage} />;
+  if (id === "bram") return <Bram />;
+  if (id === "sola") return <Sola />;
+  return <Lumi />;
 }
 
 function Sparkle({ x, y, r }: { x: number; y: number; r: number }) {

@@ -9,11 +9,12 @@ export const colors = {
 };
 
 export const fonts = {
-  display: "Fraunces_700Bold",
-  body: "Nunito_500Medium",
-  bodySemi: "Nunito_600SemiBold",
-  bodyBold: "Nunito_700Bold",
-  bodyHeavy: "Nunito_800ExtraBold",
+  display: "Fraunces_600SemiBold",
+  serif: "Fraunces_400Regular",
+  body: "Inter_400Regular",
+  bodySemi: "Inter_500Medium",
+  bodyBold: "Inter_600SemiBold",
+  bodyHeavy: "Inter_700Bold",
 };
 
 export type CompanionId = "pip" | "bram" | "sola" | "lumi";

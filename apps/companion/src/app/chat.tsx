@@ -16,7 +16,9 @@ type Msg = { id: string; role: "user" | "assistant"; content: string; pending?: 
 
 export default function Chat() {
   const { session, profile, profileLoading } = useSession();
-  const params = useLocalSearchParams<{ prefill?: string }>();
+  // prefill: put text in the box; send: send it right away (quick replies on Home).
+  const params = useLocalSearchParams<{ prefill?: string; send?: string }>();
+  const autoSend = useRef<string | null>(typeof params.send === "string" && params.send.trim() ? params.send.trim() : null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(true);
   const [thinking, setThinking] = useState(false);
@@ -51,6 +53,9 @@ export default function Chat() {
       } finally {
         if (alive) setThinking(false);
       }
+      const queued = autoSend.current;
+      autoSend.current = null;
+      if (alive && queued) await send(queued);
     })();
     return () => { alive = false; };
   }, [session, profile?.onboarded_at, profile?.ai_consent_at, loadMessages]);
@@ -60,10 +65,11 @@ export default function Chat() {
     return () => clearTimeout(t);
   }, [messages.length, thinking]);
 
-  async function send() {
-    const text = input.trim();
-    if (!text || thinking) return;
-    setInput(""); setError(null);
+  async function send(override?: string) {
+    const text = (override ?? input).trim();
+    if (!text || (thinking && !override)) return;
+    if (!override) setInput("");
+    setError(null);
     const temp: Msg = { id: `temp-${Date.now()}`, role: "user", content: text, pending: true };
     setMessages((m) => [...m, temp]);
     setThinking(true);
@@ -76,7 +82,7 @@ export default function Chat() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setMessages((m) => m.filter((x) => x.id !== temp.id));
-      setInput(text);
+      if (!override) setInput(text);
     } finally {
       setThinking(false);
     }
@@ -157,14 +163,14 @@ export default function Chat() {
             style={st.input}
             multiline
             maxLength={2000}
-            onSubmitEditing={Platform.OS === "web" ? send : undefined}
+            onSubmitEditing={Platform.OS === "web" ? () => send() : undefined}
             blurOnSubmit={Platform.OS === "web"}
           />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Send"
             accessibilityState={{ disabled: !input.trim() || thinking }}
-            onPress={send}
+            onPress={() => send()}
             style={[st.send, (!input.trim() || thinking) && { opacity: 0.4 }]}
           >
             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">

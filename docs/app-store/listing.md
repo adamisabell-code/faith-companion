@@ -31,7 +31,8 @@ MEET THE CAST
 • Lumi, a lost lamb. Soft and patient for grief, hard seasons, and coming back to faith.
 
 WHAT YOUR COMPANION DOES
-• Lives on your home screen and grows as your streak grows (Pip literally sprouts new leaves)
+• Opens each day with words of Jesus, chosen for what you're carrying
+• Has its own quiet world that fills in as you keep your word: Pip's garden, Bram's lamplit road, Sola's nest, and Lumi's sky of answered prayers
 • Prays with you in plain, personal words
 • Morning: helps you set one small, doable commitment
 • Evening: checks in on exactly what you said you'd do
@@ -75,7 +76,7 @@ Deploy the web app first (see submission-guide.md); these pages are part of it.
 ## Screenshots
 `screenshots/` has five 1320 × 2868 PNGs, the 6.9" iPhone size, which App Store Connect scales down for smaller iPhones. Upload in this order:
 1. `1-welcome.png`: meet the cast
-2. `2-home.png`: Pip's home, with today's commitment, streak, prayer list and verse
+2. `2-home.png`: home: words of Jesus over Pip's garden, Pip's latest message, today's commitment and the prayer list
 3. `3-pick-companion.png`: choosing Sola, with her story
 4. `4-chat-bram-checkin.png`: Bram's evening accountability check-in with real Scripture
 5. `5-chat-lumi-comfort.png`: Lumi comforting someone on a hard anniversary

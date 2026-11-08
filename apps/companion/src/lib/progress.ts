@@ -64,3 +64,23 @@ export const milestones = [3, 7, 30];
 export function nextMilestone(days: number): number | null {
   return milestones.find((m) => m > days) ?? null;
 }
+
+export type DaySlot = { date: string; state: "kept" | "missed" | "open" | "none" };
+
+/**
+ * The last `n` days, oldest first, ending today (Pip's garden). Days before the
+ * user's first commitment are "none" so new users don't see a row of misses.
+ */
+export function lastDays(list: Commitment[], n = 14, now = new Date()): DaySlot[] {
+  const days = bestByDay(list);
+  const first = list.reduce<string | null>((m, c) => (m === null || c.for_date < m ? c.for_date : m), null);
+  const today = localDate(now);
+  return Array.from({ length: n }, (_, i) => {
+    const key = localDate(addDays(now, i - (n - 1)));
+    const s = days.get(key);
+    if (s === "done" || s === "partial") return { date: key, state: "kept" };
+    if (key === today) return { date: key, state: "open" };
+    if (first === null || key < first) return { date: key, state: "none" };
+    return { date: key, state: "missed" };
+  });
+}
