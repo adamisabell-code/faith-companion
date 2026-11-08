@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { Animated, Easing, View, type LayoutChangeEvent } from "react-native";
 import { LivingBuddy, type BuddyHandle } from "./LivingBuddy";
-import { companionBox, growthPoint, Scene, SCENE_HEIGHT, type SceneProps } from "./Scene";
+import { companionBox, growthPoint, Scene, sceneLayout, type SceneProps } from "./Scene";
 import { haptic, nativeDriver, useReduceMotion } from "@/lib/motion";
 
 export type StageHandle = {
@@ -24,10 +24,8 @@ export const SceneStage = forwardRef<StageHandle, Omit<SceneProps, "hideCompanio
   const [width, setWidth] = useState(390);
   const [bursts, setBursts] = useState<Burst[]>([]);
 
-  // Same math as the SVG's preserveAspectRatio="xMidYMax slice".
-  const k = Math.max(width / 390, SCENE_HEIGHT / 260);
-  const offX = (width - 390 * k) / 2;
-  const offY = SCENE_HEIGHT - 260 * k;
+  // Same math as the SVG's preserveAspectRatio="xMidYMax meet".
+  const { height, k, offX, offY } = sceneLayout(width);
   const toScreen = (x: number, y: number) => ({ x: offX + x * k, y: offY + y * k });
 
   const box = companionBox[id];
@@ -57,8 +55,8 @@ export const SceneStage = forwardRef<StageHandle, Omit<SceneProps, "hideCompanio
   }), [id, answered, keptTotal, burstAt]);
 
   return (
-    <View style={{ height: SCENE_HEIGHT, width: "100%", overflow: "hidden" }} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
-      <Scene {...props} hideCompanion />
+    <View style={{ height, width: "100%", overflow: "hidden" }} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
+      <Scene {...props} hideCompanion height={height} />
       <View pointerEvents="box-none" style={{ position: "absolute", left: pos.x, top: pos.y }}>
         <LivingBuddy ref={buddy} id={id} size={size} period={period} stage={stage} dark={props.dark} />
       </View>

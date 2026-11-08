@@ -12,6 +12,24 @@ import type { Period } from "@/lib/timeOfDay";
 
 export const SCENE_HEIGHT = 260;
 
+/**
+ * The art is drawn in a 390×260 box. On wider screens it grows a little (up to
+ * 340px tall) and the landscape simply continues out to the sides, so it never
+ * zooms in or crops the companion.
+ */
+export function sceneLayout(width: number) {
+  const height = Math.round(Math.min(340, Math.max(260, (width * 260) / 390)));
+  const k = Math.min(width / 390, height / 260);
+  return { height, k, offX: (width - 390 * k) / 2, offY: height - 260 * k };
+}
+
+// Continue each hill outward horizontally past the 390-wide art box.
+function widen(d: string) {
+  return d
+    .replace(/^M0 (\d+)/, "M-3000 $1 L0 $1")
+    .replace(/390 (\d+) L390 260 L0 260 Z$/, "390 $1 L3390 $1 L3390 260 L-3000 260 Z");
+}
+
 type Palette = { sky: string; far: string; mid: string; ground: string; caption: string; celestial: string };
 
 const day: Record<CompanionId, Palette> = {
@@ -72,6 +90,8 @@ export type SceneProps = {
   last14: DaySlot[];      // oldest → today (Pip's garden)
   /** Leave the companion out (it's drawn alive on top by SceneStage). */
   hideCompanion?: boolean;
+  /** Rendered height in px (see sceneLayout). */
+  height?: number;
 };
 
 /** Where each companion stands in the 390×260 scene: top-left corner and drawn size. */
@@ -105,12 +125,14 @@ export function Scene(props: SceneProps) {
   const label = caption;
 
   return (
-    <Svg width="100%" height={SCENE_HEIGHT} viewBox="0 0 390 260" preserveAspectRatio="xMidYMax slice" accessibilityLabel={label} accessibilityRole="image">
-      <Rect x={0} y={0} width={390} height={260} fill={pal.sky} />
+    <Svg width="100%" height={props.height ?? SCENE_HEIGHT} viewBox="0 0 390 260" preserveAspectRatio="xMidYMax meet" accessibilityLabel={label} accessibilityRole="image">
+      <Rect x={-3000} y={-1000} width={6390} height={1260} fill={pal.sky} />
 
       {isNight ? (
         <G>
-          {ambientStars.map(([x, y, r]) => <Circle key={`${x}-${y}`} cx={x} cy={y} r={r} fill="#E8E6F0" opacity={0.5} />)}
+          {[-780, -390, 0, 390, 780].flatMap((dx) => ambientStars.map(([x, y, r]) => (
+            <Circle key={`${dx}-${x}-${y}`} cx={x + dx} cy={dx === 0 ? y : (y + 37) % 100} r={r} fill="#E8E6F0" opacity={0.5} />
+          )))}
           <Circle cx={326} cy={40} r={16} fill={pal.celestial} />
           <Circle cx={334} cy={34} r={15} fill={pal.sky} />
         </G>
@@ -122,9 +144,9 @@ export function Scene(props: SceneProps) {
 
       {id === "lumi" ? <LumiStars count={props.answered} night={isNight} /> : null}
 
-      <Path d={h.far} fill={pal.far} />
-      <Path d={h.mid} fill={pal.mid} />
-      <Path d={h.ground} fill={pal.ground} />
+      <Path d={widen(h.far)} fill={pal.far} />
+      <Path d={widen(h.mid)} fill={pal.mid} />
+      <Path d={widen(h.ground)} fill={pal.ground} />
 
       {id === "pip" ? <PipGarden {...props} night={isNight} /> : null}
       {id === "bram" ? <BramRoad {...props} night={isNight} /> : null}
@@ -225,7 +247,7 @@ function SolaNest({ keptTotal, night, hideCompanion }: SceneProps & { night: boo
   const leafB = night ? "#52695E" : "#7E967A";
   return (
     <G>
-      <Path d="M0 146 C 90 134 200 124 300 110 C 330 106 360 104 390 100 L390 108 C 360 112 330 114 300 118 C 200 132 90 144 0 156 Z" fill="#6B5444" />
+      <Path d="M-400 170 L0 146 C 90 134 200 124 300 110 C 330 106 360 104 390 100 L560 86 L560 92 L390 108 C 360 112 330 114 300 118 C 200 132 90 144 0 156 L-400 180 Z" fill="#6B5444" />
       <Path d="M300 114 C 316 96 330 88 352 82" fill="none" stroke="#6B5444" strokeWidth={4} strokeLinecap="round" />
       <Path d="M90 140 C 100 126 112 120 126 118" fill="none" stroke="#6B5444" strokeWidth={3} strokeLinecap="round" />
       <Ellipse cx={350} cy={76} rx={12} ry={5} fill={leafA} transform="rotate(-24 350 76)" />

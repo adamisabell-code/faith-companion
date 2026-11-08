@@ -16,7 +16,7 @@ function Arc({ d, color, w = 3.5 }: { d: string; color: string; w?: number }) {
  */
 export function Character({ id, size = 96, stage, eyes = "open" }: { id: CompanionId; size?: number; stage?: 0 | 1 | 2 | 3; eyes?: Eyes }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 200 200" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <Svg width={size} height={size} viewBox="0 0 200 200">
       {id === "pip" && <Pip stage={stage ?? 1} eyes={eyes} />}
       {id === "bram" && <Bram eyes={eyes} />}
       {id === "sola" && <Sola eyes={eyes} />}
