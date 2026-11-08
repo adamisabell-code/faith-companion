@@ -70,7 +70,31 @@ export type SceneProps = {
   keptTotal: number;      // all-time kept days (Bram's lamps, Sola's twigs)
   answered: number;       // answered prayers (Lumi's stars)
   last14: DaySlot[];      // oldest → today (Pip's garden)
+  /** Leave the companion out (it's drawn alive on top by SceneStage). */
+  hideCompanion?: boolean;
 };
+
+/** Where each companion stands in the 390×260 scene: top-left corner and drawn size. */
+export const companionBox: Record<CompanionId, { x: number; y: number; size: number }> = {
+  pip: { x: 130, y: 40, size: 130 },
+  bram: { x: 135, y: 34, size: 130 },
+  sola: { x: 111, y: 23, size: 110 },
+  lumi: { x: 130, y: 52, size: 130 },
+};
+
+/** Scene position of the newest growth (today's flower, latest lamp, the nest, newest star). */
+export function growthPoint(id: CompanionId, keptTotal: number, answered: number): { x: number; y: number } | null {
+  if (id === "pip") return { x: 352, y: 188 };
+  if (id === "bram") {
+    if (keptTotal < 1) return null;
+    const [x, y, s] = lamps[Math.min(keptTotal, lamps.length) - 1];
+    return { x, y: y - 39 * s };
+  }
+  if (id === "sola") return { x: 250, y: 114 };
+  if (answered < 1) return null;
+  const [x, y] = answeredStars[Math.min(answered, answeredStars.length) - 1];
+  return { x, y };
+}
 
 export function Scene(props: SceneProps) {
   const { id, period } = props;
@@ -78,7 +102,7 @@ export function Scene(props: SceneProps) {
   const pal = isNight ? night : day[id];
   const h = hills[id];
   const caption = captionFor(props);
-  const label = `${captionFor(props)}`;
+  const label = caption;
 
   return (
     <Svg width="100%" height={SCENE_HEIGHT} viewBox="0 0 390 260" preserveAspectRatio="xMidYMax slice" accessibilityLabel={label} accessibilityRole="image">
@@ -105,7 +129,7 @@ export function Scene(props: SceneProps) {
       {id === "pip" ? <PipGarden {...props} night={isNight} /> : null}
       {id === "bram" ? <BramRoad {...props} night={isNight} /> : null}
       {id === "sola" ? <SolaNest {...props} night={isNight} /> : null}
-      {id === "lumi" ? <LumiPasture night={isNight} /> : null}
+      {id === "lumi" ? <LumiPasture night={isNight} hideCompanion={props.hideCompanion} /> : null}
 
       <SvgText x={195} y={246} textAnchor="middle" fontFamily={fonts.body} fontSize={11.5} fill={pal.caption}>{caption}</SvgText>
     </Svg>
@@ -127,7 +151,7 @@ function captionFor({ id, keptTotal, answered }: SceneProps) {
 
 const flowerColors = ["#F4EEE2", "#E7B9A0", "#E9CF8A"];
 
-function PipGarden({ last14, stage, night }: SceneProps & { night: boolean }) {
+function PipGarden({ last14, stage, night, hideCompanion }: SceneProps & { night: boolean }) {
   return (
     <G>
       <Rect x={22} y={200} width={346} height={24} rx={12} fill={night ? "#3A3240" : "#6E5643"} />
@@ -148,7 +172,7 @@ function PipGarden({ last14, stage, night }: SceneProps & { night: boolean }) {
         return null;
       })}
       <Ellipse cx={195} cy={158} rx={34} ry={5} fill="#000000" opacity={0.12} />
-      <G transform="translate(130 40) scale(0.65)"><CompanionArt id="pip" stage={stage} /></G>
+      {hideCompanion ? null : <G transform="translate(130 40) scale(0.65)"><CompanionArt id="pip" stage={stage} /></G>}
     </G>
   );
 }
@@ -173,14 +197,14 @@ function Lamp({ x, y, s, lit, night }: { x: number; y: number; s: number; lit: b
   );
 }
 
-function BramRoad({ keptTotal, night }: SceneProps & { night: boolean }) {
+function BramRoad({ keptTotal, night, hideCompanion }: SceneProps & { night: boolean }) {
   const lit = Math.min(keptTotal, lamps.length);
   return (
     <G>
       <Path d="M140 260 C 170 220 188 178 195 140 L205 140 C 216 178 252 220 310 260 Z" fill={night ? "#45557C" : "#E3D1B0"} />
       {[...lamps].map((l, i) => ({ l, i })).reverse().filter(({ i }) => i >= 6).map(({ l, i }) => <Lamp key={i} x={l[0]} y={l[1]} s={l[2]} lit={i < lit} night={night} />)}
       <Ellipse cx={200} cy={146} rx={38} ry={5} fill="#000000" opacity={0.12} />
-      <G transform="translate(135 34) scale(0.65)"><CompanionArt id="bram" /></G>
+      {hideCompanion ? null : <G transform="translate(135 34) scale(0.65)"><CompanionArt id="bram" /></G>}
       {[...lamps].map((l, i) => ({ l, i })).reverse().filter(({ i }) => i < 6).map(({ l, i }) => <Lamp key={i} x={l[0]} y={l[1]} s={l[2]} lit={i < lit} night={night} />)}
     </G>
   );
@@ -195,7 +219,7 @@ const twigs: [number, number, number, number][] = [
   [214, 112, 240, 118], [258, 124, 280, 108], [220, 106, 262, 112], [238, 128, 272, 118],
 ];
 
-function SolaNest({ keptTotal, night }: SceneProps & { night: boolean }) {
+function SolaNest({ keptTotal, night, hideCompanion }: SceneProps & { night: boolean }) {
   const n = Math.min(keptTotal, twigs.length);
   const leafA = night ? "#5C7468" : "#8FA48A";
   const leafB = night ? "#52695E" : "#7E967A";
@@ -215,7 +239,7 @@ function SolaNest({ keptTotal, night }: SceneProps & { night: boolean }) {
         <Line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#A3825F" strokeWidth={2} strokeLinecap="round" />
       ))}
       <Ellipse cx={166} cy={125} rx={22} ry={3} fill="#000000" opacity={0.08} />
-      <G transform="translate(111 23) scale(0.55)"><CompanionArt id="sola" /></G>
+      {hideCompanion ? null : <G transform="translate(111 23) scale(0.55)"><CompanionArt id="sola" /></G>}
     </G>
   );
 }
@@ -232,7 +256,7 @@ function LumiStars({ count, night }: { count: number; night: boolean }) {
   );
 }
 
-function LumiPasture({ night }: { night: boolean }) {
+function LumiPasture({ night, hideCompanion }: { night: boolean; hideCompanion?: boolean }) {
   return (
     <G>
       <Circle cx={276} cy={120} r={40} fill="#F4CF84" opacity={night ? 0.08 : 0.05} />
@@ -242,7 +266,7 @@ function LumiPasture({ night }: { night: boolean }) {
       <Rect x={267} y={110} width={18} height={22} rx={3} fill="#3A2F28" />
       <Rect x={270} y={113} width={12} height={16} rx={2} fill="#F4CF84" />
       <Ellipse cx={195} cy={162} rx={36} ry={5} fill="#000000" opacity={night ? 0.2 : 0.1} />
-      <G transform="translate(130 52) scale(0.65)"><CompanionArt id="lumi" /></G>
+      {hideCompanion ? null : <G transform="translate(130 52) scale(0.65)"><CompanionArt id="lumi" /></G>}
     </G>
   );
 }

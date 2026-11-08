@@ -27,6 +27,11 @@ Before committing: `npx tsc --noEmit`.
 
 Shared pieces: `src/components/` (characters, picker, UI kit), `src/lib/` (Supabase client, session, API calls, push, theme).
 
+### What makes the buddies feel alive
+- `LivingBuddy.tsx`: breathing, blinking (slower at night), sway, a morning stretch, per-character tap reactions (Pip hops, Bram double-takes, Sola hops twice, Lumi puffs), an easter-egg line every 4th tap, `celebrate()` and the Amen `bow()`. Haptics on iOS/Android. Respects Reduce Motion.
+- `SceneStage.tsx`: the world (`Scene.tsx`) with the living buddy standing in it, plus a glow burst where the world just grew (new flower, lamp, twig, star).
+- `PrayerPause.tsx`: "Pause and pray". A breath prayer with the buddy breathing along, your prayer list under "Bringing to God", and the Amen bow.
+
 ## Launch
 
 See `../../docs/app-store/submission-guide.md`. Search for `TODO(launch)` for the values to fill in.

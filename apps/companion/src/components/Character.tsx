@@ -2,18 +2,25 @@
 import Svg, { Circle, Ellipse, G, Path } from "react-native-svg";
 import type { CompanionId } from "@/lib/theme";
 
+/** open = normal; closed = praying / sleepy / mid-blink; happy = delighted (^ ^). */
+export type Eyes = "open" | "closed" | "happy";
+
+function Arc({ d, color, w = 3.5 }: { d: string; color: string; w?: number }) {
+  return <Path d={d} stroke={color} strokeWidth={w} fill="none" strokeLinecap="round" />;
+}
+
 /**
  * `stage` shows growth with the user's streak (0 new → 3 at 30 days).
  * Pip literally grows (more leaves, then a flower); the others collect sparkles
  * and, at 30 days, a little crown (James 1:12, "the crown of life").
  */
-export function Character({ id, size = 96, stage }: { id: CompanionId; size?: number; stage?: 0 | 1 | 2 | 3 }) {
+export function Character({ id, size = 96, stage, eyes = "open" }: { id: CompanionId; size?: number; stage?: 0 | 1 | 2 | 3; eyes?: Eyes }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {id === "pip" && <Pip stage={stage ?? 1} />}
-      {id === "bram" && <Bram />}
-      {id === "sola" && <Sola />}
-      {id === "lumi" && <Lumi />}
+      {id === "pip" && <Pip stage={stage ?? 1} eyes={eyes} />}
+      {id === "bram" && <Bram eyes={eyes} />}
+      {id === "sola" && <Sola eyes={eyes} />}
+      {id === "lumi" && <Lumi eyes={eyes} />}
       {id !== "pip" && stage !== undefined && stage >= 1 && <Sparkle x={160} y={46} r={9} />}
       {id !== "pip" && stage !== undefined && stage >= 2 && <Sparkle x={40} y={70} r={7} />}
       {id !== "pip" && stage !== undefined && stage >= 3 && <Crown y={id === "bram" ? 40 : id === "sola" ? 52 : 44} />}
@@ -22,11 +29,11 @@ export function Character({ id, size = 96, stage }: { id: CompanionId; size?: nu
 }
 
 /** Just the companion's drawing, for placing inside a larger SVG scene. */
-export function CompanionArt({ id, stage = 1 }: { id: CompanionId; stage?: 0 | 1 | 2 | 3 }) {
-  if (id === "pip") return <Pip stage={stage} />;
-  if (id === "bram") return <Bram />;
-  if (id === "sola") return <Sola />;
-  return <Lumi />;
+export function CompanionArt({ id, stage = 1, eyes = "open" }: { id: CompanionId; stage?: 0 | 1 | 2 | 3; eyes?: Eyes }) {
+  if (id === "pip") return <Pip stage={stage} eyes={eyes} />;
+  if (id === "bram") return <Bram eyes={eyes} />;
+  if (id === "sola") return <Sola eyes={eyes} />;
+  return <Lumi eyes={eyes} />;
 }
 
 function Sparkle({ x, y, r }: { x: number; y: number; r: number }) {
@@ -42,7 +49,7 @@ function Crown({ y }: { y: number }) {
   );
 }
 
-function Pip({ stage }: { stage: 0 | 1 | 2 | 3 }) {
+function Pip({ stage, eyes }: { stage: 0 | 1 | 2 | 3; eyes: Eyes }) {
   return (
     <G>
       {stage === 0 ? (
@@ -71,16 +78,30 @@ function Pip({ stage }: { stage: 0 | 1 | 2 | 3 }) {
       <Path d="M100 70 C 60 70 52 120 64 148 C 76 176 124 176 136 148 C 148 120 140 70 100 70 Z" fill="#E0AE4A" />
       <Ellipse cx={78} cy={134} rx={8} ry={4.5} fill="#EE9A82" opacity={0.6} />
       <Ellipse cx={122} cy={134} rx={8} ry={4.5} fill="#EE9A82" opacity={0.6} />
-      <Circle cx={86} cy={118} r={6.5} fill="#2A2320" />
-      <Circle cx={88} cy={116} r={2} fill="#FFFFFF" />
-      <Circle cx={114} cy={118} r={6.5} fill="#2A2320" />
-      <Circle cx={116} cy={116} r={2} fill="#FFFFFF" />
+      {eyes === "open" ? (
+        <>
+          <Circle cx={86} cy={118} r={6.5} fill="#2A2320" />
+          <Circle cx={88} cy={116} r={2} fill="#FFFFFF" />
+          <Circle cx={114} cy={118} r={6.5} fill="#2A2320" />
+          <Circle cx={116} cy={116} r={2} fill="#FFFFFF" />
+        </>
+      ) : eyes === "closed" ? (
+        <>
+          <Arc d="M80 119 Q86 123 92 119" color="#2A2320" />
+          <Arc d="M108 119 Q114 123 120 119" color="#2A2320" />
+        </>
+      ) : (
+        <>
+          <Arc d="M80 121 Q86 113 92 121" color="#2A2320" />
+          <Arc d="M108 121 Q114 113 120 121" color="#2A2320" />
+        </>
+      )}
       <Path d="M92 134 Q100 143 108 134" stroke="#2A2320" strokeWidth={3.5} fill="none" strokeLinecap="round" />
     </G>
   );
 }
 
-function Bram() {
+function Bram({ eyes }: { eyes: Eyes }) {
   return (
     <G>
       <Path d="M70 82 C 58 42 64 20 74 22 C 86 26 90 56 86 86 Z" fill="#9C97A6" />
@@ -92,8 +113,22 @@ function Bram() {
       <Ellipse cx={100} cy={148} rx={32} ry={24} fill="#E4DED6" />
       <Ellipse cx={90} cy={146} rx={3} ry={4.5} fill="#6B6474" />
       <Ellipse cx={110} cy={146} rx={3} ry={4.5} fill="#6B6474" />
-      <Circle cx={82} cy={112} r={6.5} fill="#2A2320" />
-      <Circle cx={118} cy={112} r={6.5} fill="#2A2320" />
+      {eyes === "open" ? (
+        <>
+          <Circle cx={82} cy={112} r={6.5} fill="#2A2320" />
+          <Circle cx={118} cy={112} r={6.5} fill="#2A2320" />
+        </>
+      ) : eyes === "closed" ? (
+        <>
+          <Arc d="M76 113 Q82 117 88 113" color="#2A2320" />
+          <Arc d="M112 113 Q118 117 124 113" color="#2A2320" />
+        </>
+      ) : (
+        <>
+          <Arc d="M76 115 Q82 108 88 115" color="#2A2320" />
+          <Arc d="M112 115 Q118 108 124 115" color="#2A2320" />
+        </>
+      )}
       <Path d="M73 109 L91 106" stroke="#5E5868" strokeWidth={5} strokeLinecap="round" />
       <Path d="M109 106 L127 109" stroke="#5E5868" strokeWidth={5} strokeLinecap="round" />
       <Path d="M90 161 Q102 166 113 157" stroke="#5E5868" strokeWidth={3.5} fill="none" strokeLinecap="round" />
@@ -101,7 +136,7 @@ function Bram() {
   );
 }
 
-function Sola() {
+function Sola({ eyes }: { eyes: Eyes }) {
   return (
     <G>
       <Path d="M56 122 L28 108 L36 132 Z" fill="#7A5236" />
@@ -112,13 +147,21 @@ function Sola() {
       <Path d="M64 112 C 80 104 100 112 98 134 C 86 142 70 134 64 112 Z" fill="#8A5F3E" />
       <Path d="M148 108 L166 115 L148 122 Z" fill="#E2A33C" />
       <Ellipse cx={132} cy={124} rx={7} ry={4} fill="#EE9A82" opacity={0.6} />
-      <Circle cx={128} cy={106} r={6.5} fill="#2A2320" />
-      <Circle cx={130} cy={104} r={2} fill="#FFFFFF" />
+      {eyes === "open" ? (
+        <>
+          <Circle cx={128} cy={106} r={6.5} fill="#2A2320" />
+          <Circle cx={130} cy={104} r={2} fill="#FFFFFF" />
+        </>
+      ) : eyes === "closed" ? (
+        <Arc d="M122 106 Q128 110 134 106" color="#2A2320" />
+      ) : (
+        <Arc d="M122 108 Q128 101 134 108" color="#2A2320" />
+      )}
     </G>
   );
 }
 
-function Lumi() {
+function Lumi({ eyes }: { eyes: Eyes }) {
   const wool: [number, number, number][] = [[100, 90, 26], [70, 104, 24], [130, 104, 24], [62, 134, 22], [138, 134, 22], [84, 156, 24], [116, 156, 24]];
   return (
     <G>
@@ -130,8 +173,22 @@ function Lumi() {
       <Circle cx={89} cy={98} r={10} fill="#FFFFFF" />
       <Circle cx={100} cy={94} r={11} fill="#FFFFFF" />
       <Circle cx={111} cy={98} r={10} fill="#FFFFFF" />
-      <Path d="M86 121 Q91 115 96 121" stroke="#FFFFFF" strokeWidth={3} fill="none" strokeLinecap="round" />
-      <Path d="M104 121 Q109 115 114 121" stroke="#FFFFFF" strokeWidth={3} fill="none" strokeLinecap="round" />
+      {eyes === "closed" ? (
+        <>
+          <Arc d="M86 118 Q91 123 96 118" color="#FFFFFF" w={3} />
+          <Arc d="M104 118 Q109 123 114 118" color="#FFFFFF" w={3} />
+        </>
+      ) : eyes === "happy" ? (
+        <>
+          <Arc d="M86 122 Q91 112 96 122" color="#FFFFFF" w={3} />
+          <Arc d="M104 122 Q109 112 114 122" color="#FFFFFF" w={3} />
+        </>
+      ) : (
+        <>
+          <Arc d="M86 121 Q91 115 96 121" color="#FFFFFF" w={3} />
+          <Arc d="M104 121 Q109 115 114 121" color="#FFFFFF" w={3} />
+        </>
+      )}
       <Ellipse cx={84} cy={133} rx={5} ry={3} fill="#F2A3B3" opacity={0.8} />
       <Ellipse cx={116} cy={133} rx={5} ry={3} fill="#F2A3B3" opacity={0.8} />
       <Path d="M95 139 Q100 144 105 139" stroke="#FFFFFF" strokeWidth={2.5} fill="none" strokeLinecap="round" />

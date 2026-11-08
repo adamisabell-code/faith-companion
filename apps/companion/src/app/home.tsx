@@ -2,12 +2,14 @@
 // today's commitment and the prayer list. Light by day, dark in the evening.
 import { Redirect, router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 import { Character } from "@/components/Character";
-import { Scene, skyColor } from "@/components/Scene";
+import { PrayerPause } from "@/components/PrayerPause";
+import { skyColor } from "@/components/Scene";
+import { SceneStage, type StageHandle } from "@/components/SceneStage";
 import { openChat } from "@/lib/api";
 import { loadWords, pickWords, type Words } from "@/lib/jesus";
 import { growthStage, lastDays, localDate, streak as calcStreak, type Commitment } from "@/lib/progress";
@@ -60,6 +62,8 @@ export default function Home() {
   const [answered, setAnswered] = useState(0);
   const [lastMessage, setLastMessage] = useState<LastMessage>(null);
   const [words, setWords] = useState<Words | null>(null);
+  const [praying, setPraying] = useState(false);
+  const stage = useRef<StageHandle>(null);
 
   const id = (profile?.companion_id ?? "pip") as CompanionId;
   const c = companions[id];
@@ -111,6 +115,7 @@ export default function Home() {
     setCommitments((list) => list.map((x) => (x.id === todays.id ? { ...x, status } : x)));
     const nowKept = status === "done" || status === "partial";
     if (nowKept !== wasKept) setKeptTotal((n) => Math.max(0, n + (nowKept ? 1 : -1)));
+    if (nowKept && !wasKept) stage.current?.kept(keptTotal + 1);
     const { error } = await supabase.from("commitments").update({ status }).eq("id", todays.id);
     if (error) load();
   }
@@ -118,6 +123,7 @@ export default function Home() {
   async function markAnswered(p: Prayer) {
     setPrayers((list) => list.filter((x) => x.id !== p.id));
     setAnswered((n) => n + 1);
+    stage.current?.answered(answered + 1);
     const { error } = await supabase.from("prayer_requests").update({ status: "answered", updated_at: new Date().toISOString() }).eq("id", p.id);
     if (error) load();
   }
@@ -174,10 +180,26 @@ export default function Home() {
               </View>
             ) : <View style={{ height: 120 }} />}
           </View>
-          <Scene id={id} period={period} stage={growthStage(days)} keptTotal={keptTotal} answered={answered} last14={last14} />
+          <SceneStage ref={stage} id={id} period={period} stage={growthStage(days)} keptTotal={keptTotal} answered={answered} last14={last14} dark={page.dark} />
         </View>
 
         <View style={[st.column, st.content]}>
+          {/* Pause and pray: the signature moment */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Pause and pray with ${c.name}, about 30 seconds`}
+            onPress={() => setPraying(true)}
+            style={({ pressed }) => [st.pause, { backgroundColor: page.dark ? "#1E2638" : "#EFE8DC" }, pressed && { opacity: 0.8 }]}
+          >
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <Circle cx={12} cy={12} r={3.2} fill={tint} stroke="none" />
+              <Circle cx={12} cy={12} r={7} opacity={0.55} />
+              <Circle cx={12} cy={12} r={10.5} opacity={0.25} />
+            </Svg>
+            <Text style={[st.pauseText, { color: page.text }]}>Pause and pray with {c.name}</Text>
+            <Text style={[st.small, { color: page.muted }]}>30 sec</Text>
+          </Pressable>
+
           {/* Latest message */}
           <View style={[st.section, { borderBottomColor: page.line, paddingTop: 0 }]}>
             <Text style={[st.label, { color: page.label }]}>
@@ -255,6 +277,14 @@ export default function Home() {
         </View>
       </ScrollView>
 
+      <PrayerPause
+        visible={praying}
+        id={id}
+        intentions={prayers.map((p) => p.text)}
+        onClose={() => setPraying(false)}
+        onAmen={() => { setPraying(false); setTimeout(() => stage.current?.celebrate(), 450); }}
+      />
+
       {/* Message bar */}
       <View style={[st.column, { paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 12, backgroundColor: page.bg }]}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Message ${c.name}`} onPress={() => talk()} style={[st.composer, { backgroundColor: page.composerBg, borderColor: page.composerLine }]}>
@@ -275,7 +305,9 @@ const st = StyleSheet.create({
   iconBtn: { width: 44, height: 44, marginRight: -10, alignItems: "center", justifyContent: "center" },
   quote: { fontFamily: fonts.serif, fontSize: 26, lineHeight: 32 },
   attribution: { fontFamily: fonts.bodySemi, fontSize: 13 },
-  content: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 8 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  pause: { minHeight: 56, borderRadius: 28, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, marginBottom: 18 },
+  pauseText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 15 },
   section: { paddingVertical: 20, borderBottomWidth: 1, gap: 10 },
   label: { fontFamily: fonts.bodyBold, fontSize: 11, letterSpacing: 1.3 },
   message: { fontFamily: fonts.serif, fontSize: 19, lineHeight: 26 },
