@@ -9,8 +9,8 @@ import { haptic, nativeDriver, useReduceMotion } from "@/lib/motion";
 export type StageHandle = {
   /** Kept today's commitment: the world grows and the buddy celebrates. */
   kept: (newKeptTotal: number) => void;
-  /** A prayer was answered: a star rises (Lumi) and the buddy celebrates. */
-  answered: (newAnswered: number) => void;
+  /** A prayer was answered: the buddy is glad with you. Nothing is counted. */
+  answered: () => void;
   /** The Amen bow, played on the home buddy after praying. */
   celebrate: () => void;
 };
@@ -18,7 +18,7 @@ export type StageHandle = {
 type Burst = { key: number; x: number; y: number; color: string };
 
 export const SceneStage = forwardRef<StageHandle, Omit<SceneProps, "hideCompanion"> & { dark: boolean }>(function SceneStage(props, ref) {
-  const { id, period, stage, keptTotal, answered } = props;
+  const { id, period, stage } = props;
   const reduce = useReduceMotion();
   const buddy = useRef<BuddyHandle>(null);
   const [width, setWidth] = useState(390);
@@ -44,15 +44,14 @@ export const SceneStage = forwardRef<StageHandle, Omit<SceneProps, "hideCompanio
     kept: (n) => {
       haptic.success();
       buddy.current?.celebrate();
-      if (id !== "lumi") burstAt(growthPoint(id, n, answered), id === "bram" ? "#F4CF84" : id === "pip" ? "#F6E6B0" : "#E9D8B8");
+      burstAt(growthPoint(id, n, period), id === "bram" ? "#F4CF84" : id === "pip" ? "#F6E6B0" : id === "lumi" ? "#F2DFA8" : "#E9D8B8");
     },
-    answered: (n) => {
-      haptic.success();
+    answered: () => {
+      haptic.soft();
       buddy.current?.celebrate();
-      if (id === "lumi") burstAt(growthPoint(id, keptTotal, n, period), "#F2DFA8");
     },
     celebrate: () => buddy.current?.celebrate(),
-  }), [id, answered, keptTotal, period, burstAt]);
+  }), [id, period, burstAt]);
 
   return (
     <View style={{ height, width: "100%", overflow: "hidden" }} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>

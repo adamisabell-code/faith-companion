@@ -52,7 +52,7 @@ function growthLine(id: CompanionId, keptTotal: number, name: string) {
   if (id === "pip") return "Keep it and a new flower goes in the garden";
   if (id === "bram") return keptTotal === 0 ? "Keep it and the first lamp lights" : "Keep it and the next lamp lights";
   if (id === "sola") return `Keep it and ${name} adds a twig to the nest`;
-  return `${name} will ask about it tonight`;
+  return `Keep it and a new star comes out in ${name}'s sky`;
 }
 
 export default function Home() {
@@ -62,7 +62,6 @@ export default function Home() {
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [keptTotal, setKeptTotal] = useState(0);
   const [prayers, setPrayers] = useState<Prayer[]>([]);
-  const [answered, setAnswered] = useState(0);
   const [lastMessage, setLastMessage] = useState<LastMessage>(null);
   const [words, setWords] = useState<Words | null>(null);
   const [praying, setPraying] = useState(false);
@@ -78,18 +77,16 @@ export default function Home() {
   const ready = !!session && !!profile?.ai_consent_at;
 
   const load = useCallback(async () => {
-    const [cm, kept, pr, ans, msg, cn] = await Promise.all([
+    const [cm, kept, pr, msg, cn] = await Promise.all([
       supabase.from("commitments").select("id, text, for_date, status").order("for_date", { ascending: false }).order("created_at", { ascending: false }).limit(60),
       supabase.from("commitments").select("id", { count: "exact", head: true }).in("status", ["done", "partial"]),
       supabase.from("prayer_requests").select("id, text, status, follow_up_on, created_at").eq("status", "open").order("created_at", { ascending: false }).limit(20),
-      supabase.from("prayer_requests").select("id", { count: "exact", head: true }).eq("status", "answered"),
       supabase.from("messages").select("content, created_at").eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
       supabase.from("constellation_names").select("number, name"),
     ]);
     setCommitments((cm.data ?? []) as Commitment[]);
     setKeptTotal(kept.count ?? 0);
     setPrayers((pr.data ?? []) as Prayer[]);
-    setAnswered(ans.count ?? 0);
     setLastMessage(((msg.data ?? [])[0] as LastMessage) ?? null);
     setNames(Object.fromEntries(((cn.data ?? []) as { number: number; name: string }[]).map((r) => [r.number, r.name])));
   }, []);
@@ -124,7 +121,7 @@ export default function Home() {
     if (nowKept !== wasKept) setKeptTotal((n) => Math.max(0, n + (nowKept ? 1 : -1)));
     if (nowKept && !wasKept) {
       stage.current?.kept(keptTotal + 1);
-      if (id !== "lumi") showChapter(finishedChapter(id, keptTotal + 1));
+      showChapter(finishedChapter(id, keptTotal + 1));
     }
     const { error } = await supabase.from("commitments").update({ status }).eq("id", todays.id);
     if (error) load();
@@ -132,9 +129,7 @@ export default function Home() {
 
   async function markAnswered(p: Prayer) {
     setPrayers((list) => list.filter((x) => x.id !== p.id));
-    setAnswered((n) => n + 1);
-    stage.current?.answered(answered + 1);
-    if (id === "lumi") showChapter(finishedChapter("lumi", answered + 1));
+    stage.current?.answered();
     const { error } = await supabase.from("prayer_requests").update({ status: "answered", updated_at: new Date().toISOString() }).eq("id", p.id);
     if (error) load();
   }
@@ -203,7 +198,7 @@ export default function Home() {
               </View>
             ) : <View style={{ height: 120 }} />}
           </View>
-          <SceneStage ref={stage} id={id} period={period} stage={growthStage(days)} keptTotal={keptTotal} answered={answered} todayOpen={!!todays && !kept} constellationNames={names} dark={page.dark} />
+          <SceneStage ref={stage} id={id} period={period} stage={growthStage(days)} keptTotal={keptTotal} todayOpen={!!todays && !kept} constellationNames={names} dark={page.dark} />
         </View>
 
         <View style={[st.column, st.content]}>
@@ -277,9 +272,6 @@ export default function Home() {
           <View style={[st.section, { borderBottomWidth: 0, gap: 4 }]}>
             <View style={st.prayHead}>
               <Text style={[st.label, { color: page.label }]}>PRAYING FOR</Text>
-              {answered ? (
-                <Text style={[st.small, { color: page.muted }]}>{id === "lumi" ? `${answered} answered, in your sky` : `${answered} answered so far`}</Text>
-              ) : null}
             </View>
             {prayers.length === 0 ? (
               <Text style={[st.empty, { color: page.muted }]}>Nothing here yet. When something's on your heart, tell {c.name}. {c.name} will pray with you and follow up.</Text>
@@ -298,11 +290,11 @@ export default function Home() {
             ))}
           </View>
 
-          {/* Book of Remembrance */}
+          {/* Journal */}
           <Pressable
             accessibilityRole="button"
-            accessibilityHint="Everything God has done, kept in one place"
-            onPress={() => router.push("/remembrance")}
+            accessibilityHint="What God has done, kept in one place"
+            onPress={() => router.push("/journal")}
             style={({ pressed }) => [st.bookRow, { borderTopColor: page.line }, pressed && { opacity: 0.7 }]}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -310,8 +302,8 @@ export default function Home() {
               <Path d="M12 6.5v13" />
             </Svg>
             <View style={{ flex: 1 }}>
-              <Text style={[st.pauseText, { color: page.text }]}>Book of Remembrance</Text>
-              <Text style={[st.small, { color: page.muted }]}>{keptTotal} {keptTotal === 1 ? "day" : "days"} kept · {answered} answered</Text>
+              <Text style={[st.pauseText, { color: page.text }]}>Journal</Text>
+              <Text style={[st.small, { color: page.muted }]}>What God has done</Text>
             </View>
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={page.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 6l6 6-6 6" /></Svg>
           </Pressable>
@@ -324,7 +316,7 @@ export default function Home() {
         number={chapter ?? 1}
         onClose={() => setChapter(null)}
         onRead={(ref) => { setChapter(null); talk(`Can we read ${ref} together?`); }}
-        onOpenBook={() => { setChapter(null); router.push("/remembrance"); }}
+        onOpenBook={() => { setChapter(null); router.push("/journal"); }}
         onName={id === "lumi" ? (name) => nameConstellation(chapter ?? 1, name) : undefined}
       />
 

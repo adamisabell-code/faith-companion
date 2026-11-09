@@ -3,15 +3,11 @@
 //   Bram – a stretch of 8 lamps; each lit stretch reaches a new place on the road
 //   Sola – a nest of 16 twigs; each finished nest stays in the tree
 //   Lumi – 7 stars; each set becomes a constellation the user names
+// Every world grows from kept days: what the user does, never a count of God's answers.
 // Scripture is only ever referenced here, never quoted. Text comes from the database.
 import type { CompanionId } from "./theme";
 
 export const CHAPTER_SIZE: Record<CompanionId, number> = { pip: 30, bram: 8, sola: 16, lumi: 7 };
-
-/** Pip, Bram and Sola grow with kept days; Lumi grows with answered prayers. */
-export function metricFor(id: CompanionId, keptTotal: number, answered: number) {
-  return id === "lumi" ? answered : keptTotal;
-}
 
 /** How full the current chapter is (1..size). A just-finished chapter shows full until the next one starts. */
 export function progressIn(count: number, size: number) {
@@ -53,7 +49,7 @@ export const bramPlaces = ["the well", "the olive grove", "a house on the hill",
 /** Chapter n (1-based) for this companion. Later chapters reuse the last entry. */
 export function chapterInfo(id: CompanionId, n: number): ChapterInfo {
   if (id === "lumi") {
-    return { title: `Constellation ${n}`, line: "Seven answered prayers. They've become a constellation. What would you like to call it?" };
+    return { title: `Constellation ${n}`, line: "Seven kept days, and they've become a constellation. What would you like to call it?" };
   }
   const list = id === "pip" ? pip : id === "bram" ? bram : sola;
   return list[Math.min(n, list.length) - 1];

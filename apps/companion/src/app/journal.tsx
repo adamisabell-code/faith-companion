@@ -1,6 +1,6 @@
-// The Book of Remembrance: everything that's been kept and answered, in one place.
-// Named for the stone Samuel set up so Israel would remember how God helped them
-// (1 Samuel 7:12). Referenced, never quoted.
+// The Journal: a quiet record of what God has done and the milestones of the user's world.
+// No counts or totals on purpose: prayer isn't a scoreboard. The intro nods to the stone
+// Samuel set up so Israel would remember (1 Samuel 7:12). Referenced, never quoted.
 import { Redirect, router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useState } from "react";
@@ -8,7 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Character } from "@/components/Character";
-import { CHAPTER_SIZE, chapterInfo, chaptersDone, metricFor, progressIn } from "@/lib/chapters";
+import { CHAPTER_SIZE, chapterInfo, chaptersDone } from "@/lib/chapters";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { companions, fonts, type CompanionId } from "@/lib/theme";
@@ -17,14 +17,13 @@ import { darkPage, lightPage, periodNow } from "@/lib/timeOfDay";
 type Answered = { id: string; text: string; updated_at: string };
 
 const worldName: Record<CompanionId, string> = { pip: "Pip's garden", bram: "Bram's road", sola: "Sola's tree", lumi: "Lumi's sky" };
-const unit: Record<CompanionId, string> = { pip: "flowers", bram: "lamps", sola: "twigs", lumi: "stars" };
 
 function longDate(s: string) {
   const d = s.length === 10 ? new Date(`${s}T12:00:00`) : new Date(s);
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-export default function Remembrance() {
+export default function Journal() {
   const { session, profile } = useSession();
   const insets = useSafeAreaInsets();
   const page = periodNow() === "night" ? darkPage : lightPage;
@@ -56,11 +55,9 @@ export default function Remembrance() {
   const id = (profile.companion_id ?? "pip") as CompanionId;
   const c = companions[id];
   const size = CHAPTER_SIZE[id];
-  const count = metricFor(id, keptDates.length, answered.length);
-  const done = chaptersDone(count, size);
-  const inProgress = count % size === 0 ? 0 : progressIn(count, size);
-  // The date each chapter was finished: the date of its last kept day or answered prayer.
-  const finishedOn = (n: number) => (id === "lumi" ? answered[n * size - 1]?.updated_at : keptDates[n * size - 1]) ?? null;
+  const done = chaptersDone(keptDates.length, size);
+  // The date each chapter was finished: the date of its last kept day.
+  const finishedOn = (n: number) => keptDates[n * size - 1] ?? null;
   const tint = page.dark ? "#C8D5E8" : "#4A3F5E";
 
   async function saveName(number: number) {
@@ -83,18 +80,26 @@ export default function Remembrance() {
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={page.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M15 6l-6 6 6 6" /></Svg>
         </Pressable>
 
-        <Text style={[st.title, { color: page.text }]} accessibilityRole="header">Book of Remembrance</Text>
+        <Text style={[st.title, { color: page.text }]} accessibilityRole="header">Journal</Text>
         <Text style={[st.intro, { color: page.muted }]}>
-          When God helped Israel, Samuel set up a stone so they would never forget it. This is yours: every day you kept your word, and every prayer God answered.
+          When God helped Israel, Samuel set up a stone so they would never forget it. This is a place to remember too: what God has done, and the road you've walked with {c.name}.
         </Text>
         <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/chat", params: { send: "Can we read 1 Samuel 7:12 together?" } })} hitSlop={6}>
           <Text style={[st.ref, { color: tint }]}>Read 1 Samuel 7:12 with {c.name}</Text>
         </Pressable>
 
-        <View style={[st.stats, { borderColor: page.line }]}>
-          <Stat n={keptDates.length} label={keptDates.length === 1 ? "day kept" : "days kept"} page={page} />
-          <Stat n={answered.length} label={answered.length === 1 ? "prayer answered" : "prayers answered"} page={page} />
-          <Stat n={done} label={id === "lumi" ? (done === 1 ? "constellation" : "constellations") : done === 1 ? "chapter" : "chapters"} page={page} />
+        {/* What God has done */}
+        <View style={st.section}>
+          <Text style={[st.label, { color: page.label }]}>WHAT GOD HAS DONE</Text>
+          {loaded && answered.length === 0 ? (
+            <Text style={[st.empty, { color: page.muted }]}>Nothing here yet. When a prayer is answered, tap "Answered" on Home and it's written here.</Text>
+          ) : null}
+          {[...answered].reverse().map((p) => (
+            <View key={p.id} style={[st.row, { borderBottomColor: page.lineSoft }]}>
+              <Text style={[st.prayer, { color: page.text }]}>{p.text}</Text>
+              <Text style={[st.small, { color: page.muted }]}>Answered {longDate(p.updated_at)}</Text>
+            </View>
+          ))}
         </View>
 
         {/* The companion's world, chapter by chapter */}
@@ -103,17 +108,6 @@ export default function Remembrance() {
             <Character id={id} size={36} />
             <Text style={[st.label, { color: page.label }]}>{worldName[id].toUpperCase()}</Text>
           </View>
-
-          {loaded ? (
-            <View style={[st.row, { borderBottomColor: page.lineSoft }]}>
-              <Text style={[st.rowTitle, { color: page.text }]}>
-                {id === "lumi" ? `Constellation ${done + 1}` : chapterInfo(id, done + 1).title}
-              </Text>
-              <Text style={[st.small, { color: page.muted }]}>
-                In progress · {inProgress} of {size} {unit[id]}
-              </Text>
-            </View>
-          ) : null}
 
           {chapters.map((n) => {
             const info = chapterInfo(id, n);
@@ -130,7 +124,7 @@ export default function Remembrance() {
                         onChangeText={setDraft}
                         maxLength={40}
                         autoFocus
-                        placeholder="Name it after what God did"
+                        placeholder="Give it a name"
                         placeholderTextColor={page.muted}
                         onSubmitEditing={() => saveName(n)}
                         accessibilityLabel={`Name for constellation ${n}`}
@@ -146,7 +140,7 @@ export default function Remembrance() {
                     <>
                       <Text style={[st.rowTitle, { color: name ? page.text : page.muted }]}>{name ? `“${name}”` : "Not named yet"}</Text>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                        {when ? <Text style={[st.small, { color: page.muted }]}>Seventh star {longDate(when)}</Text> : null}
+                        {when ? <Text style={[st.small, { color: page.muted }]}>{longDate(when)}</Text> : null}
                         <Pressable accessibilityRole="button" accessibilityLabel={name ? `Rename constellation ${n}` : `Name constellation ${n}`} onPress={() => { setEditing(n); setDraft(name ?? ""); setError(null); }} hitSlop={8}>
                           <Text style={[st.link, { color: tint }]}>{name ? "Rename" : "Name it"}</Text>
                         </Pressable>
@@ -167,39 +161,16 @@ export default function Remembrance() {
           {loaded && done === 0 ? (
             <Text style={[st.empty, { color: page.muted }]}>
               {id === "lumi"
-                ? "When seven prayers are answered, they become a constellation, and it's written here."
-                : `When the first ${size} ${unit[id]} are in, the first chapter is written here.`}
+                ? "Every seven kept days become a constellation, and each one is written here."
+                : "As your world grows, each chapter is written here."}
             </Text>
           ) : null}
-        </View>
-
-        {/* Answered prayers */}
-        <View style={st.section}>
-          <Text style={[st.label, { color: page.label }]}>WHAT GOD ANSWERED</Text>
-          {loaded && answered.length === 0 ? (
-            <Text style={[st.empty, { color: page.muted }]}>Nothing here yet. When a prayer is answered, tap "Answered" on Home and it's kept here for good.</Text>
-          ) : null}
-          {[...answered].reverse().map((p) => (
-            <View key={p.id} style={[st.row, { borderBottomColor: page.lineSoft }]}>
-              <Text style={[st.prayer, { color: page.text }]}>{p.text}</Text>
-              <Text style={[st.small, { color: page.muted }]}>Answered {longDate(p.updated_at)}</Text>
-            </View>
-          ))}
         </View>
 
         {keptDates.length ? (
           <Text style={[st.footer, { color: page.muted }]}>Your first kept day: {longDate(keptDates[0])}.</Text>
         ) : null}
       </ScrollView>
-    </View>
-  );
-}
-
-function Stat({ n, label, page }: { n: number; label: string; page: typeof lightPage }) {
-  return (
-    <View style={st.stat} accessible accessibilityLabel={`${n} ${label}`}>
-      <Text style={[st.statN, { color: page.text }]}>{n}</Text>
-      <Text style={[st.small, { color: page.muted, textAlign: "center" }]}>{label}</Text>
     </View>
   );
 }
@@ -211,9 +182,6 @@ const st = StyleSheet.create({
   title: { fontFamily: fonts.display, fontSize: 32, lineHeight: 38, marginTop: 8 },
   intro: { fontFamily: fonts.serif, fontSize: 17, lineHeight: 25, marginTop: 12 },
   ref: { fontFamily: fonts.bodySemi, fontSize: 14, textDecorationLine: "underline", marginTop: 10 },
-  stats: { flexDirection: "row", borderTopWidth: 1, borderBottomWidth: 1, marginTop: 24, paddingVertical: 18 },
-  stat: { flex: 1, alignItems: "center", gap: 2 },
-  statN: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, fontVariant: ["tabular-nums"] },
   section: { marginTop: 32, gap: 2 },
   sectionHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
   label: { fontFamily: fonts.bodyBold, fontSize: 11, letterSpacing: 1.3 },

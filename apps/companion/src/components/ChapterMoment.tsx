@@ -72,7 +72,7 @@ export function ChapterMoment({ visible, id, number, onClose, onRead, onOpenBook
               <TextInput
                 value={name}
                 onChangeText={setName}
-                placeholder="Name it after what God did"
+                placeholder="Give it a name"
                 placeholderTextColor="#7F879B"
                 maxLength={40}
                 autoFocus={false}
@@ -86,7 +86,7 @@ export function ChapterMoment({ visible, id, number, onClose, onRead, onOpenBook
                 <Text style={st.primaryText}>{saving ? "Saving…" : "Name it"}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={onClose} style={st.secondary}>
-                <Text style={st.secondaryText}>Later. I can name it in the Book of Remembrance.</Text>
+                <Text style={st.secondaryText}>Later. I can name it in my journal.</Text>
               </Pressable>
             </>
           ) : (
@@ -100,7 +100,7 @@ export function ChapterMoment({ visible, id, number, onClose, onRead, onOpenBook
                 <Text style={st.primaryText}>Keep going</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={onOpenBook} style={st.secondary}>
-                <Text style={st.secondaryText}>Open the Book of Remembrance</Text>
+                <Text style={st.secondaryText}>Open your journal</Text>
               </Pressable>
             </>
           )}

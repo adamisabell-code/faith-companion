@@ -22,7 +22,7 @@ Before committing: `npx tsc --noEmit`.
 | `/onboarding/about` → `companion` → `focus` → `times`, then `/consent` | The 4-step setup plus AI-data consent. Saves the profile at the end |
 | `/home` | Main screen: words of Jesus, the companion's world (`components/Scene.tsx`, light by day and dark after 6pm), latest message with quick replies, today's commitment, prayer list |
 | `/chat` | The conversation. On open, the server adds the first greeting or a due check-in |
-| `/remembrance` | Book of Remembrance: days kept, prayers answered, every finished chapter with its date, naming Lumi's constellations |
+| `/journal` | Journal: what God has done (answered prayers, newest first), every finished chapter with its date, naming Lumi's constellations. No counts or totals on purpose |
 | `/settings` | Companion, tradition, translation, check-in times, reminders, legal, sign out, delete account |
 | `/privacy`, `/terms`, `/support` | Legal pages, also the App Store URLs |
 
@@ -31,7 +31,7 @@ Shared pieces: `src/components/` (characters, picker, UI kit), `src/lib/` (Supab
 ### What makes the buddies feel alive
 - `LivingBuddy.tsx`: breathing, blinking (slower at night), sway, a morning stretch, per-character tap reactions (Pip hops, Bram double-takes, Sola hops twice, Lumi puffs), an easter-egg line every 4th tap, `celebrate()` and the Amen `bow()`. Haptics on iOS/Android. Respects Reduce Motion.
 - `SceneStage.tsx`: the world (`Scene.tsx`) with the living buddy standing in it, plus a glow burst where the world just grew (new flower, lamp, twig, star).
-- Chapters (`lib/chapters.ts`): worlds never fill up or reset. Pip's bed holds 30 flowers and every full bed grows the mustard tree (then birds come); Bram's road lights 8 lamps per stretch and reaches the well, the olive grove, a house, then the town on a hill; Sola finishes a 16-twig nest and starts the next one higher; every 7 answered prayers become one of Lumi's constellations, which the user names (`constellation_names` table). Finishing a chapter opens `ChapterMoment.tsx`.
+- Chapters (`lib/chapters.ts`): worlds never fill up or reset. Pip's bed holds 30 flowers and every full bed grows the mustard tree (then birds come); Bram's road lights 8 lamps per stretch and reaches the well, the olive grove, a house, then the town on a hill; Sola finishes a 16-twig nest and starts the next one higher; every world grows from kept days, never from a count of answered prayers; Lumi's sky gets a star per kept day and every 7 become a constellation, which the user names (`constellation_names` table). Finishing a chapter opens `ChapterMoment.tsx`.
 - `PrayerPause.tsx`: "Pause and pray". A breath prayer with the buddy breathing along, your prayer list under "Bringing to God", and the Amen bow.
 
 ## Launch

@@ -3,7 +3,7 @@
 //   Pip  – a garden bed, one flower per kept day; every full bed (30) grows the mustard tree
 //   Bram – a road of 8 lamps; every lit stretch reaches a new place (well, grove, house, town)
 //   Sola – a nest of 16 twigs; finished nests stay in the tree, new ones go higher
-//   Lumi – the night sky; every 7 answered prayers form a constellation the user names
+//   Lumi – the night sky, one star per kept day; every 7 form a constellation the user names
 // Worlds never reset. See lib/chapters.ts.
 import Svg, { Circle, Ellipse, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import { CompanionArt } from "./Character";
@@ -82,7 +82,6 @@ export type SceneProps = {
   period: Period;
   stage: 0 | 1 | 2 | 3;
   keptTotal: number;      // all-time kept days (Pip, Bram, Sola)
-  answered: number;       // answered prayers (Lumi)
   /** Today has a commitment that isn't kept yet (Pip shows where its flower will go). */
   todayOpen?: boolean;
   /** Lumi's constellation names, by number (1 = first). */
@@ -102,7 +101,7 @@ export const companionBox: Record<CompanionId, { x: number; y: number; size: num
 };
 
 /** Scene position of the newest growth (today's flower, latest lamp, the nest, newest star). */
-export function growthPoint(id: CompanionId, keptTotal: number, answered: number, period?: Period): { x: number; y: number } | null {
+export function growthPoint(id: CompanionId, keptTotal: number, period?: Period): { x: number; y: number } | null {
   if (id === "pip") {
     const n = progressIn(keptTotal, CHAPTER_SIZE.pip);
     return n < 1 ? null : { x: flowerX(n - 1), y: 188 };
@@ -114,9 +113,9 @@ export function growthPoint(id: CompanionId, keptTotal: number, answered: number
     return { x, y: y - 39 * s };
   }
   if (id === "sola") return { x: 250, y: 114 };
-  const n = progressIn(answered, CHAPTER_SIZE.lumi);
+  const n = progressIn(keptTotal, CHAPTER_SIZE.lumi);
   if (n < 1) return null;
-  const { origin, pattern } = currentConstellation(answered, period);
+  const { origin, pattern } = currentConstellation(keptTotal, period);
   const [px, py] = patterns[pattern].points[n - 1];
   return { x: origin[0] + px, y: origin[1] + py };
 }
@@ -147,7 +146,7 @@ export function Scene(props: SceneProps) {
         <Circle cx={84} cy={34} r={32} fill={pal.celestial} />
       )}
 
-      {id === "lumi" ? <LumiSky answered={props.answered} period={period} /> : null}
+      {id === "lumi" ? <LumiSky kept={props.keptTotal} period={period} /> : null}
 
       <Path d={widen(h.far)} fill={pal.far} />
       <Path d={widen(h.mid)} fill={pal.mid} />
@@ -163,17 +162,17 @@ export function Scene(props: SceneProps) {
   );
 }
 
-function captionFor({ id, keptTotal, answered, constellationNames }: SceneProps) {
+function captionFor({ id, keptTotal, constellationNames }: SceneProps) {
   const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
   if (id === "lumi") {
-    if (answered === 0) return "Each answered prayer becomes a star here.";
-    const n = progressIn(answered, 7);
-    const number = Math.ceil(answered / 7);
+    if (keptTotal === 0) return "Each star is a day you kept your word.";
+    const n = progressIn(keptTotal, 7);
+    const number = Math.ceil(keptTotal / 7);
     if (n === 7) {
       const name = constellationNames?.[number];
-      return name ? `\u201C${name}.\u201D Seven answered prayers.` : "Seven answered prayers. A new constellation.";
+      return name ? `\u201C${name}.\u201D Seven kept days.` : "Seven kept days. A new constellation.";
     }
-    return `${plural(answered, "answered prayer")}. ${n} of 7 stars in this constellation.`;
+    return `${plural(keptTotal, "day")} kept. ${n} of 7 stars in this constellation.`;
   }
   const done = chaptersDone(keptTotal, CHAPTER_SIZE[id]);
   if (id === "pip") {
@@ -443,9 +442,9 @@ const origins = (period?: Period) =>
     : { current: [24, 12] as [number, number], past: [206, 6] as [number, number] };
 
 /** The constellation being drawn now (or the one just finished, until the next star). */
-function currentConstellation(answered: number, period?: Period) {
-  const n = progressIn(answered, 7);
-  const done = chaptersDone(answered, 7);
+function currentConstellation(kept: number, period?: Period) {
+  const n = progressIn(kept, 7);
+  const done = chaptersDone(kept, 7);
   const index = n === 7 ? done - 1 : done; // 0-based constellation number
   return { index, n, origin: origins(period).current, pattern: index % patterns.length };
 }
@@ -467,10 +466,10 @@ function Constellation({ pattern, count, x, y, scale, color, r }: { pattern: num
   );
 }
 
-function LumiSky({ answered, period }: { answered: number; period: Period }) {
-  if (answered < 1) return null;
+function LumiSky({ kept, period }: { kept: number; period: Period }) {
+  if (kept < 1) return null;
   const color = period === "night" ? "#F2DFA8" : "#C9A85B";
-  const cur = currentConstellation(answered, period);
+  const cur = currentConstellation(kept, period);
   const past = origins(period).past;
   return (
     <G>

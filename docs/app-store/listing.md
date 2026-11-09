@@ -32,11 +32,11 @@ MEET THE CAST
 
 WHAT YOUR COMPANION DOES
 • Opens each day with words of Jesus, chosen for what you're carrying
-• Has its own quiet world that fills in as you keep your word: Pip's garden, Bram's lamplit road, Sola's nest, and Lumi's sky of answered prayers
+• Has its own quiet world that fills in as you keep your word: Pip's garden, Bram's lamplit road, Sola's nest, and Lumi's starry sky
 • Prays with you in plain, personal words
 • Morning: helps you set one small, doable commitment
 • Evening: checks in on exactly what you said you'd do
-• Remembers prayer requests, follows up, and keeps a list of the prayers God answered
+• Remembers prayer requests, follows up, and keeps a journal of what God has done
 • Finds Bible passages for what you're going through
 
 REAL SCRIPTURE, NOT MADE-UP VERSES
