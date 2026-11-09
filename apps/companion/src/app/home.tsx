@@ -6,15 +6,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
+import { ChapterMoment } from "@/components/ChapterMoment";
 import { Character } from "@/components/Character";
 import { PrayerPause } from "@/components/PrayerPause";
 import { skyColor } from "@/components/Scene";
 import { SceneStage, type StageHandle } from "@/components/SceneStage";
 import { openChat } from "@/lib/api";
+import { finishedChapter } from "@/lib/chapters";
 import { loadWords, pickWords, type Words } from "@/lib/jesus";
-import { growthStage, lastDays, localDate, streak as calcStreak, type Commitment } from "@/lib/progress";
+import { growthStage, localDate, streak as calcStreak, type Commitment } from "@/lib/progress";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
+import { useReduceMotion } from "@/lib/motion";
 import { companions, fonts, type CompanionId } from "@/lib/theme";
 import { darkPage, greetingFor, lightPage, periodNow, type Period } from "@/lib/timeOfDay";
 
@@ -63,6 +66,9 @@ export default function Home() {
   const [lastMessage, setLastMessage] = useState<LastMessage>(null);
   const [words, setWords] = useState<Words | null>(null);
   const [praying, setPraying] = useState(false);
+  const [names, setNames] = useState<Record<number, string>>({});
+  const [chapter, setChapter] = useState<number | null>(null);
+  const reduce = useReduceMotion();
   const stage = useRef<StageHandle>(null);
 
   const id = (profile?.companion_id ?? "pip") as CompanionId;
@@ -72,18 +78,20 @@ export default function Home() {
   const ready = !!session && !!profile?.ai_consent_at;
 
   const load = useCallback(async () => {
-    const [cm, kept, pr, ans, msg] = await Promise.all([
+    const [cm, kept, pr, ans, msg, cn] = await Promise.all([
       supabase.from("commitments").select("id, text, for_date, status").order("for_date", { ascending: false }).order("created_at", { ascending: false }).limit(60),
       supabase.from("commitments").select("id", { count: "exact", head: true }).in("status", ["done", "partial"]),
       supabase.from("prayer_requests").select("id, text, status, follow_up_on, created_at").eq("status", "open").order("created_at", { ascending: false }).limit(20),
       supabase.from("prayer_requests").select("id", { count: "exact", head: true }).eq("status", "answered"),
       supabase.from("messages").select("content, created_at").eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
+      supabase.from("constellation_names").select("number, name"),
     ]);
     setCommitments((cm.data ?? []) as Commitment[]);
     setKeptTotal(kept.count ?? 0);
     setPrayers((pr.data ?? []) as Prayer[]);
     setAnswered(ans.count ?? 0);
     setLastMessage(((msg.data ?? [])[0] as LastMessage) ?? null);
+    setNames(Object.fromEntries(((cn.data ?? []) as { number: number; name: string }[]).map((r) => [r.number, r.name])));
   }, []);
 
   // Refresh whenever Home comes back into view (after chatting, after settings).
@@ -107,7 +115,6 @@ export default function Home() {
   const todays = commitments.find((x) => x.for_date === today) ?? null;
   const kept = todays?.status === "done" || todays?.status === "partial";
   const days = useMemo(() => calcStreak(commitments), [commitments]);
-  const last14 = useMemo(() => lastDays(commitments), [commitments]);
 
   async function setTodayStatus(status: Commitment["status"]) {
     if (!todays) return;
@@ -115,7 +122,10 @@ export default function Home() {
     setCommitments((list) => list.map((x) => (x.id === todays.id ? { ...x, status } : x)));
     const nowKept = status === "done" || status === "partial";
     if (nowKept !== wasKept) setKeptTotal((n) => Math.max(0, n + (nowKept ? 1 : -1)));
-    if (nowKept && !wasKept) stage.current?.kept(keptTotal + 1);
+    if (nowKept && !wasKept) {
+      stage.current?.kept(keptTotal + 1);
+      if (id !== "lumi") showChapter(finishedChapter(id, keptTotal + 1));
+    }
     const { error } = await supabase.from("commitments").update({ status }).eq("id", todays.id);
     if (error) load();
   }
@@ -124,8 +134,21 @@ export default function Home() {
     setPrayers((list) => list.filter((x) => x.id !== p.id));
     setAnswered((n) => n + 1);
     stage.current?.answered(answered + 1);
+    if (id === "lumi") showChapter(finishedChapter("lumi", answered + 1));
     const { error } = await supabase.from("prayer_requests").update({ status: "answered", updated_at: new Date().toISOString() }).eq("id", p.id);
     if (error) load();
+  }
+
+  // Let the world grow first, then the quiet chapter moment.
+  function showChapter(n: number | null) {
+    if (n) setTimeout(() => setChapter(n), reduce ? 300 : 1700);
+  }
+
+  async function nameConstellation(number: number, name: string) {
+    const { error } = await supabase.from("constellation_names").upsert({ user_id: session!.user.id, number, name });
+    if (error) return "Couldn't save that. Try again in a moment.";
+    setNames((m) => ({ ...m, [number]: name }));
+    return null;
   }
 
   function talk(send?: string) {
@@ -180,7 +203,7 @@ export default function Home() {
               </View>
             ) : <View style={{ height: 120 }} />}
           </View>
-          <SceneStage ref={stage} id={id} period={period} stage={growthStage(days)} keptTotal={keptTotal} answered={answered} last14={last14} dark={page.dark} />
+          <SceneStage ref={stage} id={id} period={period} stage={growthStage(days)} keptTotal={keptTotal} answered={answered} todayOpen={!!todays && !kept} constellationNames={names} dark={page.dark} />
         </View>
 
         <View style={[st.column, st.content]}>
@@ -274,8 +297,36 @@ export default function Home() {
               </View>
             ))}
           </View>
+
+          {/* Book of Remembrance */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint="Everything God has done, kept in one place"
+            onPress={() => router.push("/remembrance")}
+            style={({ pressed }) => [st.bookRow, { borderTopColor: page.line }, pressed && { opacity: 0.7 }]}
+          >
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5Z" />
+              <Path d="M12 6.5v13" />
+            </Svg>
+            <View style={{ flex: 1 }}>
+              <Text style={[st.pauseText, { color: page.text }]}>Book of Remembrance</Text>
+              <Text style={[st.small, { color: page.muted }]}>{keptTotal} {keptTotal === 1 ? "day" : "days"} kept · {answered} answered</Text>
+            </View>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={page.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M9 6l6 6-6 6" /></Svg>
+          </Pressable>
         </View>
       </ScrollView>
+
+      <ChapterMoment
+        visible={chapter !== null}
+        id={id}
+        number={chapter ?? 1}
+        onClose={() => setChapter(null)}
+        onRead={(ref) => { setChapter(null); talk(`Can we read ${ref} together?`); }}
+        onOpenBook={() => { setChapter(null); router.push("/remembrance"); }}
+        onName={id === "lumi" ? (name) => nameConstellation(chapter ?? 1, name) : undefined}
+      />
 
       <PrayerPause
         visible={praying}
@@ -325,6 +376,7 @@ const st = StyleSheet.create({
   prayText: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
   answerBtn: { minHeight: 44, justifyContent: "center", paddingLeft: 8 },
   answerText: { fontFamily: fonts.bodySemi, fontSize: 13, textDecorationLine: "underline" },
+  bookRow: { flexDirection: "row", alignItems: "center", gap: 14, minHeight: 64, borderTopWidth: 1, paddingVertical: 12 },
   composer: { height: 56, borderRadius: 28, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 8 },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   composerText: { flex: 1, fontFamily: fonts.body, fontSize: 15 },

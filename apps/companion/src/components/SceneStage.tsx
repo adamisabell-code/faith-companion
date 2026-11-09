@@ -49,10 +49,10 @@ export const SceneStage = forwardRef<StageHandle, Omit<SceneProps, "hideCompanio
     answered: (n) => {
       haptic.success();
       buddy.current?.celebrate();
-      if (id === "lumi") burstAt(growthPoint(id, keptTotal, n), "#F2DFA8");
+      if (id === "lumi") burstAt(growthPoint(id, keptTotal, n, period), "#F2DFA8");
     },
     celebrate: () => buddy.current?.celebrate(),
-  }), [id, answered, keptTotal, burstAt]);
+  }), [id, answered, keptTotal, period, burstAt]);
 
   return (
     <View style={{ height, width: "100%", overflow: "hidden" }} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
