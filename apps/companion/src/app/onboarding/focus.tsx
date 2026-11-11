@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CompanionSays } from "@/components/CompanionSays";
 import { Button, H1, Progress, Screen } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { useOnboarding } from "@/lib/onboarding";
 import { colors, companions, focusAreas, fonts } from "@/lib/theme";
 
@@ -23,8 +24,8 @@ export default function Focus() {
   }
 
   return (
-    <Screen footer={<Button title="Continue" disabled={!draft.focus.length} onPress={() => router.push("/onboarding/times")} />}>
-      <Progress step={3} of={4} />
+    <Screen footer={<Button title="Continue" disabled={!draft.focus.length} onPress={() => { track("onboarding_focus_set", { count: draft.focus.length }); router.push("/onboarding/about"); }} />}>
+      <Progress step={2} of={4} />
       <CompanionSays id={draft.companion}>{prompts[draft.companion]}</CompanionSays>
       <H1 style={{ fontSize: 28 }}>I want help with…</H1>
       <View style={st.grid}>

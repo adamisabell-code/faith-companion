@@ -2,11 +2,13 @@
 import { Redirect } from "expo-router";
 import { Text } from "react-native";
 import { Screen, H1, Body } from "@/components/ui";
+import { draftReady, useOnboarding } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 import { supabaseConfigured } from "@/lib/supabase";
 
 export default function Index() {
   const { session, profile, profileLoading } = useSession();
+  const { draft } = useOnboarding();
 
   if (!supabaseConfigured) {
     return (
@@ -20,6 +22,7 @@ export default function Index() {
 
   if (!session) return <Redirect href="/welcome" />;
   if (profileLoading) return null; // wait for the profile before choosing a screen
-  if (!profile?.onboarded_at) return <Redirect href="/onboarding/about" />;
+  // New account: if they already met their buddy before signing up, go straight to the last steps.
+  if (!profile?.onboarded_at) return <Redirect href={draftReady(draft) ? "/onboarding/times" : "/onboarding/companion"} />;
   return <Redirect href="/home" />;
 }

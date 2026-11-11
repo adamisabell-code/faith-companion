@@ -3,10 +3,13 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { CompanionSays } from "@/components/CompanionSays";
 import { Body, Button, Field, H1, Screen } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { WEB_URL } from "@/lib/config";
+import { draftReady, useOnboarding } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { colors, companions, fonts } from "@/lib/theme";
 
 export default function SignIn() {
   const params = useLocalSearchParams<{ mode?: string }>();
@@ -16,6 +19,16 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // They've already met their buddy: this is "save what we started", not a cold form.
+  const { draft } = useOnboarding();
+  const met = mode === "signup" && draftReady(draft);
+  const buddy = companions[draft.companion];
+  const savePitch = {
+    pip: `Nice to meet you, ${draft.firstName.trim()}. Make an account so I can remember what we plant.`,
+    bram: `${draft.firstName.trim()}. Good. Make an account so I can hold you to it.`,
+    sola: `Hello, ${draft.firstName.trim()}. Make an account so I can remember what you bring me.`,
+    lumi: `I'm glad you're here, ${draft.firstName.trim()}. Make an account so I can stay with you.`,
+  }[draft.companion];
 
   async function submit() {
     setError(null); setNotice(null);
@@ -27,6 +40,7 @@ export default function SignIn() {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email: e, password });
         if (error) throw error;
+        track("signup_completed", { met_buddy: draftReady(draft) });
         if (!data.session) {
           setNotice("Check your email to confirm your account, then come back and sign in.");
           setMode("signin");
@@ -69,8 +83,9 @@ export default function SignIn() {
       }
     >
       <View style={{ gap: 8, marginTop: 12 }}>
-        <H1>{mode === "signup" ? "Create your account" : "Welcome back"}</H1>
-        <Body>{mode === "signup" ? "So your companion can remember your prayers and check in on you." : "Sign in to pick up where you left off."}</Body>
+        {met ? <CompanionSays id={draft.companion}>{savePitch}</CompanionSays> : null}
+        <H1>{mode === "signin" ? "Welcome back" : met ? `Save your walk with ${buddy.name}` : "Create your account"}</H1>
+        <Body>{mode === "signin" ? "Sign in to pick up where you left off." : `Free to start. So ${met ? buddy.name : "your companion"} can remember your prayers and check in on you.`}</Body>
       </View>
       <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" inputMode="email" textContentType="emailAddress" placeholder="you@example.com" />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete={mode === "signup" ? "new-password" : "current-password"} textContentType={mode === "signup" ? "newPassword" : "password"} placeholder="At least 8 characters" onSubmitEditing={submit} />

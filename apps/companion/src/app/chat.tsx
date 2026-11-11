@@ -7,7 +7,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Character } from "@/components/Character";
 import { RichText } from "@/components/RichText";
-import { openChat, sendMessage } from "@/lib/api";
+import { track, trackOnce } from "@/lib/analytics";
+import { ApiError, openChat, sendMessage } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { colors, companions, fonts } from "@/lib/theme";
@@ -24,6 +25,7 @@ export default function Chat() {
   const [thinking, setThinking] = useState(false);
   const [input, setInput] = useState(typeof params.prefill === "string" ? params.prefill : "");
   const [error, setError] = useState<string | null>(null);
+  const [limit, setLimit] = useState<string | null>(null); // today's free conversation is used up
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [reported, setReported] = useState<Set<string>>(new Set());
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
@@ -75,12 +77,15 @@ export default function Chat() {
     setThinking(true);
     try {
       const r = await sendMessage(text);
+      trackOnce("first_message_sent");
+      track("message_sent");
       setMessages((m) => [
         ...m.map((x) => (x.id === temp.id ? { ...x, pending: false } : x)),
         ...(r.reply ? [{ id: r.message_id ?? `reply-${Date.now()}`, role: "assistant" as const, content: r.reply }] : []),
       ]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof ApiError && e.code === "free_limit") { setLimit(e.message); track("free_limit_reached"); }
+      else setError(e instanceof Error ? e.message : String(e));
       setMessages((m) => m.filter((x) => x.id !== temp.id));
       if (!override) setInput(text);
     } finally {
@@ -100,7 +105,7 @@ export default function Chat() {
 
   if (!session) return <Redirect href="/welcome" />;
   if (profileLoading) return null;
-  if (!profile?.onboarded_at) return <Redirect href="/onboarding/about" />;
+  if (!profile?.onboarded_at) return <Redirect href="/" />;
   if (!profile.ai_consent_at) return <Redirect href="/consent" />;
 
   return (
@@ -151,6 +156,14 @@ export default function Chat() {
             </View>
           ) : null}
           {error ? <Text accessibilityRole="alert" style={st.error}>{error}</Text> : null}
+          {limit ? (
+            <View style={st.limit} accessibilityRole="alert">
+              <Text style={st.limitText}>{limit}</Text>
+              <Pressable accessibilityRole="button" onPress={() => router.push("/plus")} hitSlop={6}>
+                <Text style={st.limitLink}>See Amen Buddy Plus</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
 
         <View style={st.composer}>
@@ -202,6 +215,9 @@ const st = StyleSheet.create({
   actionText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.ink },
   actionDone: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.inkSoft },
   error: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.danger, textAlign: "center" },
+  limit: { backgroundColor: colors.white, borderRadius: 18, padding: 16, gap: 8, alignItems: "center" },
+  limitText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: colors.ink, textAlign: "center" },
+  limitLink: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink, textDecorationLine: "underline" },
   composer: { flexDirection: "row", alignItems: "flex-end", gap: 10, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: "#DCD8E6" },
   input: { flex: 1, minHeight: 44, maxHeight: 140, borderWidth: 1, borderColor: "#C9C4D8", borderRadius: 22, backgroundColor: "#F7F6FA", paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontFamily: fonts.body, fontSize: 16, color: colors.ink },
   send: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },

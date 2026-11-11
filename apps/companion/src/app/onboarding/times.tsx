@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CompanionSays } from "@/components/CompanionSays";
@@ -6,6 +6,7 @@ import { TimeCard } from "@/components/TimeCard";
 import { Button, H1, Progress, Screen } from "@/components/ui";
 import { useOnboarding } from "@/lib/onboarding";
 import { pushSupported, registerForPush } from "@/lib/push";
+import { useSession } from "@/lib/session";
 import { timesValid } from "@/lib/times";
 import { colors, companions, fonts } from "@/lib/theme";
 
@@ -28,6 +29,7 @@ export default function Times() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const c = companions[draft.companion];
+  const { session } = useSession();
 
   async function next(askForPush: boolean) {
     setError(null);
@@ -38,6 +40,9 @@ export default function Times() {
     setBusy(false);
     router.push("/consent");
   }
+
+  // Check-ins belong to an account, so this step comes after sign-up.
+  if (!session) return <Redirect href="/welcome" />;
 
   return (
     <Screen

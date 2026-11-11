@@ -15,6 +15,11 @@ export class ConsentRequired extends Error {
 
 export type UserContext = {
   system: string;
+  /** Rules + tradition + character: identical turn after turn, so the AI provider can cache it. */
+  systemStable: string;
+  /** What the buddy knows about this user right now: changes every turn. */
+  systemLive: string;
+  firstName: string;
   translation: string;
   includeDeuterocanon: boolean;
   companionName: string;
@@ -56,11 +61,13 @@ export async function buildContext(db: SupabaseClient, userId: string, now = new
 
   const translation = p.translation_id ?? tradition?.default_translation ?? "BSB";
 
-  const system = [
+  const systemStable = [
     rules.data.body,
     `# The user's tradition\n\n${tradition?.profile_md ?? "Unknown. Ask gently, and stick to beliefs shared by most Christians (the Apostles' and Nicene Creeds) until you know."}`,
     `# Your character\n\n${companion.system_prompt}`,
-    `# About this user
+  ].join("\n\n---\n\n");
+
+  const systemLive = `# About this user
 - First name: ${p.first_name ?? "unknown"}
 - Where they are with faith: ${p.faith_stage ?? "unknown"}
 - What they want help with: ${(p.focus_areas ?? []).join(", ") || "not set"}
@@ -76,11 +83,15 @@ ${(commitments.data ?? []).map((c) => `- ${c.for_date}: ${c.text} (${c.status}${
 ${(prayers.data ?? []).map((r) => `- [id ${r.id}] ${r.text}${r.follow_up_on ? ` (follow up ${r.follow_up_on})` : ""}`).join("\n") || "- none"}
 
 ## Things they've told you
-${(memories.data ?? []).map((m) => `- ${m.fact}`).join("\n") || "- nothing yet"}`,
-  ].join("\n\n---\n\n");
+${(memories.data ?? []).map((m) => `- ${m.fact}`).join("\n") || "- nothing yet"}`;
+
+  const system = `${systemStable}\n\n---\n\n${systemLive}`;
 
   return {
     system,
+    systemStable,
+    systemLive,
+    firstName: (p.first_name ?? "the user").trim() || "the user",
     translation,
     includeDeuterocanon: Boolean(tradition?.uses_deuterocanon),
     companionName: companion.name,

@@ -18,6 +18,7 @@ export const privacy: Doc = {
         "What you tell us during setup: first name, church tradition, where you are with faith, what you'd like help with, preferred Bible translation, check-in times and time zone.",
         "Your conversations with your companion, and what the companion saves from them so it can follow up: daily commitments, prayer requests, and short notes it remembers (like the name of someone you're praying for).",
         "A push notification token, if you turn on reminders, so we can send your check-ins. Notification text is kept general (for example, \"Bram is checking in on your day\") so nothing private shows on your lock screen.",
+        "How the app is used: simple counts of actions like finishing setup, keeping a commitment, opening the journal, or sharing a verse card, plus how much AI processing each reply needed. These never include what you wrote or prayed. We keep them in our own database to improve the app; no outside analytics or advertising company receives them. Before you create an account, these counts are tied to a random ID stored on your device, not to you.",
         "Safety and quality records: if a conversation involves a crisis topic we record that it happened (not a copy of the conversation), and if you report a reply we keep that reply so we can review it.",
       ],
     },

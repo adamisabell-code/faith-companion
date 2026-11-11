@@ -8,6 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Character } from "@/components/Character";
+import { track } from "@/lib/analytics";
 import { CHAPTER_SIZE, chapterInfo, chaptersDone } from "@/lib/chapters";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -47,7 +48,7 @@ export default function Journal() {
     setLoaded(true);
   }, []);
 
-  useFocusEffect(useCallback(() => { if (session) load(); }, [session, load]));
+  useFocusEffect(useCallback(() => { if (session) { load(); track("journal_opened"); } }, [session, load]));
 
   if (!session) return <Redirect href="/welcome" />;
   if (!profile) return <Redirect href="/" />;

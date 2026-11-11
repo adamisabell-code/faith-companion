@@ -4,7 +4,8 @@ import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Body, Button, H1, Screen } from "@/components/ui";
-import { useOnboarding } from "@/lib/onboarding";
+import { track } from "@/lib/analytics";
+import { clearDraft, useOnboarding } from "@/lib/onboarding";
 import { traditionIdFor } from "@/lib/profileDefaults";
 import { claimPushToken } from "@/lib/pushToken";
 import { deviceTimezone, useSession } from "@/lib/session";
@@ -43,6 +44,7 @@ export default function Consent() {
     if (!res.error && draft.pushToken) await claimPushToken(draft.pushToken);
     setBusy(false);
     if (res.error) return setError(res.error);
+    if (!alreadySetUp) { track("onboarding_completed", { buddy: draft.companion }); clearDraft(); }
     router.replace("/chat");
   }
 

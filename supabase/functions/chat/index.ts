@@ -7,7 +7,7 @@
 //   { "dev_user_id": "<uuid>", "message": "..." }  or  { "dev_user_id": "...", "checkin": "evening" }
 // Returns: { "reply": string | null, "message_id": string | null, "checkin": kind | null, "tools_used": [...] }
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { admin, claimCheckin, dueCheckin, overRateLimit, releaseCheckin, runTurn } from "../_shared/engine.ts";
+import { admin, claimCheckin, dueCheckin, overFreeLimit, overRateLimit, releaseCheckin, runTurn } from "../_shared/engine.ts";
 import { ConsentRequired, type CheckinKind } from "../_shared/prompt.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -54,6 +54,11 @@ Deno.serve(async (req) => {
       if (!who.dev) {
         const limited = await overRateLimit(who.id);
         if (limited) return json({ error: limited }, 429);
+        // Free plan (only when the paywall is switched on): a gentle stop, not an error.
+        const { data: tzRow } = await admin.from("profiles").select("timezone").eq("user_id", who.id).maybeSingle();
+        if (await overFreeLimit(who.id, tzRow?.timezone ?? null)) {
+          return json({ error: "That's today's free conversation. Your check-ins, prayer and journal are still here, and we can talk again tomorrow.", code: "free_limit" }, 402);
+        }
       }
       const r = await runTurn(who.id, { message });
       return json({ reply: r.reply, message_id: r.messageId, checkin: null, tools_used: r.toolsUsed });

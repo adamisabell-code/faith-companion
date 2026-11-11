@@ -16,7 +16,9 @@ App Store Connect → App Privacy → Get Started. These match what the code and
 | User Content → Customer Support | Yes (reported replies, support email) | Yes | No | App Functionality |
 | Identifiers → User ID | Yes (account ID) | Yes | No | App Functionality |
 | Identifiers → Device ID | Yes (push notification token) | Yes | No | App Functionality |
-| Usage Data, Diagnostics, Location, Health & Fitness, Financial, Contacts, Browsing/Search History, Purchases | No | | | |
+| Usage Data → Product Interaction | Yes (event counts such as "kept a commitment", "shared a card"; never message text) | Yes | No | Analytics, App Functionality |
+| Diagnostics, Location, Health & Fitness, Financial, Contacts, Browsing/Search History | No | | | |
+| Purchases | No today. Change to Yes (Linked, App Functionality) when Amen Buddy Plus goes live | | | |
 
 Notes:
 - "Sensitive Info" is Apple's category for religious beliefs, among others; the tradition choice falls under it.

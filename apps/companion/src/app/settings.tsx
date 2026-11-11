@@ -114,6 +114,7 @@ export default function Settings() {
       </Section>
 
       <Section title="Help & legal">
+        <Button kind="secondary" title="Amen Buddy Plus" onPress={() => router.push("/plus")} />
         <Button kind="secondary" title="Support" onPress={() => router.push("/support")} />
         <Button kind="secondary" title="Privacy Policy" onPress={() => router.push("/privacy")} />
         <Button kind="secondary" title="Terms of Use" onPress={() => router.push("/terms")} />

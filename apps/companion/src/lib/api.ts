@@ -12,12 +12,18 @@ async function authHeader(): Promise<Record<string, string>> {
   };
 }
 
+/** A server error, with a short machine code when the app should react to it (e.g. "free_limit"). */
+export class ApiError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) { super(message); this.code = code; }
+}
+
 async function post<T>(fn: string, body: unknown): Promise<T> {
   const res = await fetch(`${functionsUrl}/${fn}`, { method: "POST", headers: await authHeader(), body: JSON.stringify(body) });
   const text = await res.text();
   let json: any;
   try { json = JSON.parse(text); } catch { throw new Error(`Server error (${res.status}).`); }
-  if (!res.ok || json.error) throw new Error(json.error ?? `Server error (${res.status}).`);
+  if (!res.ok || json.error) throw new ApiError(json.error ?? `Server error (${res.status}).`, json.code);
   return json as T;
 }
 

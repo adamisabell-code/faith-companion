@@ -9,8 +9,10 @@ import Svg, { Circle, Path } from "react-native-svg";
 import { ChapterMoment } from "@/components/ChapterMoment";
 import { Character } from "@/components/Character";
 import { PrayerPause } from "@/components/PrayerPause";
+import { ShareSheet } from "@/components/ShareSheet";
 import { skyColor } from "@/components/Scene";
 import { SceneStage, type StageHandle } from "@/components/SceneStage";
+import { track } from "@/lib/analytics";
 import { openChat } from "@/lib/api";
 import { finishedChapter } from "@/lib/chapters";
 import { loadWords, pickWords, type Words } from "@/lib/jesus";
@@ -65,6 +67,7 @@ export default function Home() {
   const [lastMessage, setLastMessage] = useState<LastMessage>(null);
   const [words, setWords] = useState<Words | null>(null);
   const [praying, setPraying] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [names, setNames] = useState<Record<number, string>>({});
   const [chapter, setChapter] = useState<number | null>(null);
   const reduce = useReduceMotion();
@@ -121,6 +124,7 @@ export default function Home() {
     if (nowKept !== wasKept) setKeptTotal((n) => Math.max(0, n + (nowKept ? 1 : -1)));
     if (nowKept && !wasKept) {
       stage.current?.kept(keptTotal + 1);
+      track("commitment_kept", { buddy: id });
       showChapter(finishedChapter(id, keptTotal + 1));
     }
     const { error } = await supabase.from("commitments").update({ status }).eq("id", todays.id);
@@ -130,13 +134,16 @@ export default function Home() {
   async function markAnswered(p: Prayer) {
     setPrayers((list) => list.filter((x) => x.id !== p.id));
     stage.current?.answered();
+    track("prayer_marked_answered");
     const { error } = await supabase.from("prayer_requests").update({ status: "answered", updated_at: new Date().toISOString() }).eq("id", p.id);
     if (error) load();
   }
 
   // Let the world grow first, then the quiet chapter moment.
   function showChapter(n: number | null) {
-    if (n) setTimeout(() => setChapter(n), reduce ? 300 : 1700);
+    if (!n) return;
+    track("chapter_finished", { buddy: id, chapter: n });
+    setTimeout(() => setChapter(n), reduce ? 300 : 1700);
   }
 
   async function nameConstellation(number: number, name: string) {
@@ -170,7 +177,7 @@ export default function Home() {
 
   if (!session) return <Redirect href="/welcome" />;
   if (profileLoading) return null;
-  if (!profile?.onboarded_at) return <Redirect href="/onboarding/about" />;
+  if (!profile?.onboarded_at) return <Redirect href="/" />;
   if (!profile.ai_consent_at) return <Redirect href="/consent" />;
 
   const long = (words?.text.length ?? 0) > 110;
@@ -192,9 +199,19 @@ export default function Home() {
               </Pressable>
             </View>
             {words ? (
-              <View style={{ gap: 10 }} accessible accessibilityLabel={`Jesus said: ${words.text}. ${words.reference}`}>
-                <Text style={[st.quote, { color: page.quote }, long && { fontSize: 22, lineHeight: 28 }]}>“{words.text}”</Text>
-                <Text style={[st.attribution, { color: page.attribution }]}>Jesus · {words.reference} ({words.translation})</Text>
+              <View style={{ gap: 6 }}>
+                <View style={{ gap: 10 }} accessible accessibilityLabel={`Jesus said: ${words.text}. ${words.reference}`}>
+                  <Text style={[st.quote, { color: page.quote }, long && { fontSize: 22, lineHeight: 28 }]}>“{words.text}”</Text>
+                </View>
+                <View style={st.attributionRow}>
+                  <Text style={[st.attribution, { color: page.attribution, flex: 1 }]}>Jesus · {words.reference} ({words.translation})</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Share today's words" onPress={() => setSharing(true)} hitSlop={8} style={({ pressed }) => [st.shareBtn, pressed && { opacity: 0.6 }]}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={page.attribution} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M12 15V4M8 7.5 12 3.5l4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" />
+                    </Svg>
+                    <Text style={[st.attribution, { color: page.attribution }]}>Share</Text>
+                  </Pressable>
+                </View>
               </View>
             ) : <View style={{ height: 120 }} />}
           </View>
@@ -320,12 +337,15 @@ export default function Home() {
         onName={id === "lumi" ? (name) => nameConstellation(chapter ?? 1, name) : undefined}
       />
 
+      {words ? (
+        <ShareSheet visible={sharing} onClose={() => setSharing(false)} id={id} period={period} words={words} keptTotal={keptTotal} stage={growthStage(days)} />
+      ) : null}
       <PrayerPause
         visible={praying}
         id={id}
         intentions={prayers.map((p) => p.text)}
         onClose={() => setPraying(false)}
-        onAmen={() => { setPraying(false); setTimeout(() => stage.current?.celebrate(), 450); }}
+        onAmen={() => { track("prayer_pause_completed", { buddy: id }); setPraying(false); setTimeout(() => stage.current?.celebrate(), 450); }}
       />
 
       {/* Message bar */}
@@ -348,6 +368,8 @@ const st = StyleSheet.create({
   iconBtn: { width: 44, height: 44, marginRight: -10, alignItems: "center", justifyContent: "center" },
   quote: { fontFamily: fonts.serif, fontSize: 26, lineHeight: 32 },
   attribution: { fontFamily: fonts.bodySemi, fontSize: 13 },
+  attributionRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 32 },
+  shareBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32, paddingLeft: 8 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   pause: { minHeight: 56, borderRadius: 28, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, marginBottom: 18 },
   pauseText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 15 },

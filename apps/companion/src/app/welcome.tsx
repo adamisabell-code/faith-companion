@@ -1,15 +1,18 @@
 import { router } from "expo-router";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Character } from "@/components/Character";
 import { Body, Button, H1, Screen } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { colors, companionOrder, companions, fonts } from "@/lib/theme";
 
 export default function Welcome() {
+  useEffect(() => { track("welcome_viewed"); }, []);
   return (
     <Screen
       footer={
         <>
-          <Button title="Get started" onPress={() => router.push("/sign-in?mode=signup")} />
+          <Button title="Meet your buddy" onPress={() => router.push("/onboarding/companion")} />
           <Button kind="link" title="I already have an account" onPress={() => router.push("/sign-in?mode=signin")} />
         </>
       }

@@ -26,14 +26,30 @@ type Block =
   | { type: "tool_result"; tool_use_id: string; content: string };
 type Msg = { role: "user" | "assistant"; content: string | Block[] };
 
-async function callClaude(system: string, messages: Msg[]) {
+type Usage = { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+type ClaudeResponse = { content: Block[]; stop_reason: string; usage?: Usage };
+
+// The rules, tradition and character are the same on every turn, so we mark them
+// cacheable: the AI provider bills cached input at a fraction of the normal price.
+// If the provider ever rejects the cached form, we fall back to the plain prompt.
+let cachingOk = true;
+
+async function callClaude(stable: string, live: string, messages: Msg[]): Promise<ClaudeResponse> {
   for (let attempt = 1; ; attempt++) {
+    const system = cachingOk
+      ? [{ type: "text", text: stable, cache_control: { type: "ephemeral" } }, { type: "text", text: live }]
+      : `${stable}\n\n---\n\n${live}`;
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_KEY!, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({ model: MODEL, max_tokens: 1024, system, tools: toolDefs, messages }),
     });
-    if (res.ok) return await res.json() as { content: Block[]; stop_reason: string };
+    if (res.ok) return await res.json() as ClaudeResponse;
+    if (res.status === 400 && cachingOk) {
+      const detail = await res.text();
+      if (/cache/i.test(detail)) { cachingOk = false; console.warn("Prompt caching rejected; continuing without it.", detail); continue; }
+      throw new Error(`Anthropic 400: ${detail}`);
+    }
     // Retry briefly on overload / rate limits.
     if ((res.status === 429 || res.status === 529 || res.status >= 500) && attempt < 3) {
       await new Promise((r) => setTimeout(r, 800 * attempt));
@@ -65,8 +81,7 @@ export async function runTurn(userId: string, opts: { message?: string; checkin?
     userMessageId = data?.id;
   }
 
-  const firstName = (ctx.system.match(/- First name: (.+)/)?.[1] ?? "the user").trim();
-  const turn = opts.message ?? checkinCue(opts.checkin!, firstName);
+  const turn = opts.message ?? checkinCue(opts.checkin!, ctx.firstName);
 
   // Alternate roles, starting with the user; merge any back-to-back turns.
   const messages: Msg[] = [];
@@ -81,9 +96,15 @@ export async function runTurn(userId: string, opts: { message?: string; checkin?
   if (messages[0]?.role === "assistant") messages.unshift({ role: "user", content: "[Earlier conversation]" });
 
   const toolsUsed: string[] = [];
+  const used = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, rounds: 0 };
   let reply = "";
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const res = await callClaude(ctx.system, messages);
+    const res = await callClaude(ctx.systemStable, ctx.systemLive, messages);
+    used.rounds++;
+    used.input += res.usage?.input_tokens ?? 0;
+    used.output += res.usage?.output_tokens ?? 0;
+    used.cacheRead += res.usage?.cache_read_input_tokens ?? 0;
+    used.cacheWrite += res.usage?.cache_creation_input_tokens ?? 0;
     const text = res.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("\n").trim();
     if (text) reply = text;
     if (res.stop_reason !== "tool_use") break;
@@ -110,6 +131,17 @@ export async function runTurn(userId: string, opts: { message?: string; checkin?
 
   const { data: saved } = await admin.from("messages")
     .insert({ user_id: userId, role: "assistant", content: reply }).select("id").single();
+
+  // Record what this turn cost (token counts only, never content). Best-effort:
+  // a missing table or failed write must never break the conversation.
+  try {
+    await admin.from("ai_usage").insert({
+      user_id: userId, kind: opts.message ? "message" : "checkin", model: MODEL,
+      input_tokens: used.input, output_tokens: used.output,
+      cache_read_tokens: used.cacheRead, cache_write_tokens: used.cacheWrite, rounds: used.rounds,
+    });
+  } catch (e) { console.warn("ai_usage not recorded", e); }
+
   return { reply, messageId: saved?.id ?? null, toolsUsed };
 }
 
@@ -172,6 +204,32 @@ export async function claimCheckin(userId: string, kind: CheckinKind, tz: string
 export async function releaseCheckin(userId: string, kind: CheckinKind, tz: string | null, now = new Date()) {
   const { date } = localNow(tz, now);
   await admin.from("check_ins").delete().eq("user_id", userId).eq("kind", kind).eq("local_date", date);
+}
+
+// ---------- Free plan (switched off until PAYWALL_ENABLED=true) ----------
+
+const PAYWALL_ENABLED = Deno.env.get("PAYWALL_ENABLED") === "true";
+const FREE_DAILY_MESSAGES = Math.max(1, Number(Deno.env.get("FREE_DAILY_MESSAGES") ?? "12") || 12);
+
+/**
+ * Has a free user used up today's conversation? Returns false unless the paywall
+ * is switched on. Check-ins are never counted, Plus members are never limited,
+ * and nobody is cut off within a day of a safety concern being logged.
+ */
+export async function overFreeLimit(userId: string, tz: string | null): Promise<boolean> {
+  if (!PAYWALL_ENABLED) return false;
+  const now = new Date();
+  const { minutes } = localNow(tz, now);
+  const startOfDay = new Date(now.getTime() - minutes * 60_000).toISOString();
+  const dayAgo = new Date(now.getTime() - 86_400_000).toISOString();
+  const [{ count: today }, plus, { count: safety }] = await Promise.all([
+    admin.from("messages").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("role", "user").gte("created_at", startOfDay),
+    admin.rpc("is_plus", { p_user: userId }),
+    admin.from("safety_events").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", dayAgo),
+  ]);
+  if (plus.data === true) return false;
+  if ((safety ?? 0) > 0) return false;
+  return (today ?? 0) >= FREE_DAILY_MESSAGES;
 }
 
 /** Simple per-user limits so one account can't run up the AI bill. */

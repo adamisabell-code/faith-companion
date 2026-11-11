@@ -121,15 +121,26 @@ export function growthPoint(id: CompanionId, keptTotal: number, period?: Period)
 }
 
 export function Scene(props: SceneProps) {
+  const pal = props.period === "night" ? night : day[props.id];
+  const caption = captionFor(props);
+  return (
+    <Svg width="100%" height={props.height ?? SCENE_HEIGHT} viewBox="0 0 390 260" preserveAspectRatio="xMidYMax meet" accessibilityLabel={caption} accessibilityRole="image">
+      <SceneArt {...props} />
+      <SvgText x={195} y={246} textAnchor="middle" fontFamily={fonts.body} fontSize={11.5} fill={pal.caption}>{caption}</SvgText>
+    </Svg>
+  );
+}
+
+/** The world itself (sky, hills, growth, buddy) in a 390×260 box, with no caption.
+ *  Used by Scene, and by the share card, which places it inside a larger picture. */
+export function SceneArt(props: SceneProps) {
   const { id, period } = props;
   const isNight = period === "night";
   const pal = isNight ? night : day[id];
   const h = hills[id];
-  const caption = captionFor(props);
-  const label = caption;
 
   return (
-    <Svg width="100%" height={props.height ?? SCENE_HEIGHT} viewBox="0 0 390 260" preserveAspectRatio="xMidYMax meet" accessibilityLabel={label} accessibilityRole="image">
+    <G>
       <Rect x={-3000} y={-1000} width={6390} height={1260} fill={pal.sky} />
 
       {isNight ? (
@@ -156,9 +167,7 @@ export function Scene(props: SceneProps) {
       {id === "bram" ? <BramRoad {...props} night={isNight} far={pal.far} /> : null}
       {id === "sola" ? <SolaNest {...props} night={isNight} /> : null}
       {id === "lumi" ? <LumiPasture night={isNight} hideCompanion={props.hideCompanion} /> : null}
-
-      <SvgText x={195} y={246} textAnchor="middle" fontFamily={fonts.body} fontSize={11.5} fill={pal.caption}>{caption}</SvgText>
-    </Svg>
+    </G>
   );
 }
 

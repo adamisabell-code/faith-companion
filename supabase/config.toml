@@ -11,3 +11,7 @@ verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = false
+
+# Store purchase events (not live until RevenueCat is set up). Checks its own shared secret.
+[functions.revenuecat-webhook]
+verify_jwt = false
